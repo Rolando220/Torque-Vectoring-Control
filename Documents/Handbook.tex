@@ -1,0 +1,81 @@
+% !TeX encoding = UTF-8
+\documentclass[12pt]{report}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[english]{babel}
+\usepackage{graphicx}
+\usepackage{titlesec}
+\usepackage{hyperref}
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue,
+  urlcolor=blue,
+  linktoc=all
+}
+\graphicspath{{images/}}
+\titleformat{\chapter}[hang]{\normalfont\huge\bfseries}{\thechapter.}{1em}{}
+
+\title{Torque Vectoring}
+\author{}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\tableofcontents
+
+\cleardoublepage
+
+\chapter{Introduction}
+\label{chap:introduction}
+
+Torque vectoring is a widely known technique to improve vehicle handling and to increase stability in limit conditions. With the advent of electric vehicles, this is becoming a key topic since it is possible to have distributed powertrains. The possibility of independently controlling the torque on each wheel quickly and precisely makes applying Torque Vectoring Control (TVC) strategies easy. Indeed, Torque Vectoring (TV) consists in applying different longitudinal forces to the wheels of the same axle, resulting in a yaw moment that is used to control the vehicle lateral dynamics.
+
+Regarding TV control architecture, most of the literature proposes a multilayer cascaded control composed by three main blocks, as in Figure~\ref{fig:tv_control_scheme}, which include the following:
+\begin{itemize}
+  \item reference generator;
+  \item high-level controller;
+  \item low-level controller.
+\end{itemize}
+
+\IfFileExists{Images/TV_control_scheme.png}{%
+  \begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.8\textwidth]{Images/TV_control_scheme.png}
+    \caption{TV control scheme}
+    \label{fig:tv_control_scheme}
+  \end{figure}
+}{%
+  \begin{figure}[htbp]
+    \centering
+    \fbox{\parbox{0.8\textwidth}{\centering [TV_control_scheme.png not found — add the image file to the `Images` folder]}}
+    \caption{TV control scheme (placeholder)}
+    \label{fig:tv_control_scheme_placeholder}
+  \end{figure}
+}
+
+\section{V-Model design}
+\label{sec:vmodel}
+
+A V-model design was adopted for the development of the TVC system. 
+As shown in Figure~\ref{fig:vmodel}, the left side of the V represents the decomposition of system requirements into more detailed specifications and design, while the right side represents the integration and verification of the system against those requirements.
+
+
+\IfFileExists{Images/V-model.jpg}{%
+  \begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.8\textwidth]{Images/V-model.jpg}
+    \caption{V-Model}
+    \label{fig:vmodel}
+  \end{figure}
+}{%
+  \begin{figure}[htbp]
+    \centering
+    \fbox{\parbox{0.8\textwidth}{\centering [V-model.jpg not found — add the image file to the `Images` folder]}}
+    \caption{V-Model (placeholder)}
+    \label{fig:vmodel_placeholder}
+  \end{figure}
+}
+
+\end{document}
