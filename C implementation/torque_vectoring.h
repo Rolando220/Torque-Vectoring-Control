@@ -7,10 +7,16 @@
 #define T_REGEN_MAX     25.0f   // Maximum regenerative torque (Nm)
 #define TRACK_WIDTH     1.136f  // Track width vp.t2 (m)
 #define WHEEL_RADIUS    0.2395f // Wheel radius vp.Rr (m)
+#define WHEELBASE       1.527f  // Wheelbase (m)
+#define STEER_RATIO     0.4273f // Steering ratio
+#define MU              1.0f    // Coefficient of friction
+#define G_GRAVITY       9.81f   // Gravitational acceleration (m/s^2)
+#define VEHICLE_MASS    300.0f  // Vehicle mass (kg)
+#define K_US 
 
 // Control limits
 
-#define MZ_MAX          1300.0f  // Maximum yaw moment (Nm)
+#define MZ_MAX          1005.0f  // Maximum yaw moment (Nm)
 
 // Control structs
 
@@ -31,5 +37,6 @@ typedef struct {
 
 float TV_PID(float yaw_rate_ref, float yaw_rate_actual, PID_State *pid);
 Wheel_Torques torque_allocator(float T_req_pilot, float Mz_ctrl);
+float reference_generator(float Vx, float steering_wheel_angle);
 
 #endif

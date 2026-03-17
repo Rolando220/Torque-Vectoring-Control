@@ -11,9 +11,10 @@ float TV_PID(float yaw_rate_ref, float yaw_rate_actual, PID_State *pid) {
 
     float Mz_test = P + pid->integral_acc + (pid->Ki * error * pid->dt);
 
-    if ( (Mz_test >= MZ_MAX && error > 0.0f) ) || (Mz_test <= -MZ_MAX && error < 0.0f) ) {
+    if ( (Mz_test >= MZ_MAX && error > 0.0f) || (Mz_test <= -MZ_MAX && error < 0.0f) ) {
         // Do not update integral accumulator to prevent wind-up
-    } else {
+    } 
+    else {
         // Update integral accumulator
         pid->integral_acc += pid->Ki * error * pid->dt;
     }
@@ -32,3 +33,28 @@ float TV_PID(float yaw_rate_ref, float yaw_rate_actual, PID_State *pid) {
     return Mz_out;
 }
 
+Wheel_Torques torque_allocator(float T_req_pilot, float Mz_ctrl){
+
+    Wheel_Torques torques_out;
+
+    float deltaT = ( Mz_ctrl * WHEEL_RADIUS ) / TRACK_WIDTH;
+
+    float T_L_raw = (T_req_pilot / 2.0f) - deltaT;
+    float T_R_raw = (T_req_pilot / 2.0f) + deltaT;
+
+    if ( T_L_raw > T_DRIVE_MAX ) { torques_out.T_left = T_DRIVE_MAX; }
+    else if ( T_L_raw < -T_REGEN_MAX ) { torques_out.T_left = -T_REGEN_MAX; }
+    else { torques_out.T_left = T_L_raw; }
+
+    if ( T_R_raw > T_DRIVE_MAX ) { torques_out.T_right = T_DRIVE_MAX; }
+    else if ( T_R_raw < -T_REGEN_MAX ) { torques_out.T_right = -T_REGEN_MAX; }
+    else { torques_out.T_right = T_R_raw; }
+
+    return torques_out;
+}
+
+float reference_generator(float Vx, float steering_wheel_angle){
+
+    float delta_steering = steering_wheel_angle * STEER_RATIO; // Convert steering wheel angle to actual wheel steering angle
+    
+}
