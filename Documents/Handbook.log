@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.25 (TeX Live 2023/Debian) (preloaded format=pdflatex 2026.3.11)  11 MAR 2026 10:48
+This is pdfTeX, Version 3.141592653-2.6-1.40.25 (TeX Live 2023/Debian) (preloaded format=pdflatex 2026.3.11)  17 MAR 2026 09:08
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -273,7 +273,7 @@ l.28 \cleardoublepage
 
 ]
 Chapter 1.
-<Images/TV_control_scheme.png, id=31, 475.02469pt x 109.1578pt>
+<Images/TV_control_scheme.png, id=55, 475.02469pt x 109.1578pt>
 File: Images/TV_control_scheme.png Graphic file (type png)
 <use Images/TV_control_scheme.png>
 Package pdftex.def Info: Images/TV_control_scheme.png  used on input line 56.
@@ -282,32 +282,61 @@ Package pdftex.def Info: Images/TV_control_scheme.png  used on input line 56.
 
 
  <./Images/TV_control_scheme.png>]
-<Images/V-model.jpg, id=41, 215.1293pt x 186.89359pt>
+<Images/V-model.jpg, id=65, 215.1293pt x 186.89359pt>
 File: Images/V-model.jpg Graphic file (type jpg)
 <use Images/V-model.jpg>
 Package pdftex.def Info: Images/V-model.jpg  used on input line 80.
 (pdftex.def)             Requested size: 312.00119pt x 271.05434pt.
- [3 <./Images/V-model.jpg>] (./Handbook.aux)
+ [3 <./Images/V-model.jpg>]
+Overfull \hbox (2.03476pt too wide) in paragraph at lines 92--93
+\T1/cmr/m/n/12 yaw-rate over-shoot, pre-vent-ing un-con-trol-lable over-steer (spin) and keep-
+ []
+
+[4]
+Chapter 2.
+
+Overfull \hbox (4.7263pt too wide) in paragraph at lines 97--97
+|[]\T1/cmr/bx/n/24.88 Requirement Anal-y-sis and Sys-
+ []
+
+[5
+
+]
+Overfull \hbox (1.8653pt too wide) in paragraph at lines 117--117
+|[]\T1/cmr/bx/n/17.28 Powertrain Con-straints and Ac-tu-a-tion Lim-
+ []
+
+
+Overfull \hbox (12.30437pt too wide) in paragraph at lines 125--126
+[]\T1/cmr/bx/n/12 Maximum Brak-ing Torque (Re-gen-er-a-tive): \T1/cmr/m/n/12 The re-gen-er-a-tive torque
+ []
+
+
+Overfull \hbox (8.98611pt too wide) in paragraph at lines 125--126
+\T1/cmr/m/n/12 limit ab-sorbable by the in-verter and bat-tery pack is lim-ited to $\OML/cmm/m/it/12 T[] \OT1/cmr/m/n/12 =
+ []
+
+[6] (./Handbook.aux)
  ***********
 LaTeX2e <2023-11-01> patch level 1
 L3 programming layer <2024-01-22>
  ***********
 Package rerunfilecheck Info: File `Handbook.out' has not changed.
-(rerunfilecheck)             Checksum: 5B7547236F734DB4C326C73B1A723B34;230.
+(rerunfilecheck)             Checksum: 0D26F36649F6F4D34DA35828A1015632;1260.
  ) 
 Here is how much of TeX's memory you used:
- 10006 strings out of 476182
- 156862 string characters out of 5795595
- 1927975 words of memory out of 5000000
- 31889 multiletter control sequences out of 15000+600000
+ 10021 strings out of 476182
+ 157075 string characters out of 5795595
+ 1929975 words of memory out of 5000000
+ 31897 multiletter control sequences out of 15000+600000
  568226 words of font info for 57 fonts, out of 8000000 for 9000
  14 hyphenation exceptions out of 8191
- 75i,6n,79p,669b,470s stack positions out of 10000i,1000n,20000p,200000b,200000s
- </home/codespace/.texlive2023/texmf-var/fonts/pk/ljfour/jknappen/ec/ecbx1728.600pk> </home/codespace/.texlive2023/texmf-var/fonts/pk/ljfour/jknappen/ec/tcrm1200.600pk> </home/codespace/.texlive2023/texmf-var/fonts/pk/ljfour/jknappen/ec/ecrm1200.600pk> </home/codespace/.texlive2023/texmf-var/fonts/pk/ljfour/jknappen/ec/ecbx1200.600pk> </home/codespace/.texlive2023/texmf-var/fonts/pk/ljfour/jknappen/ec/ecbx2488.600pk> </home/codespace/.texlive2023/texmf-var/fonts/pk/ljfour/jknappen/ec/ecrm1440.600pk> </home/codespace/.texlive2023/texmf-var/fonts/pk/ljfour/jknappen/ec/ecrm2074.600pk>
-Output written on Handbook.pdf (4 pages, 106341 bytes).
+ 75i,6n,79p,669b,523s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ </home/codespace/.texlive2023/texmf-var/fonts/pk/ljfour/jknappen/ec/ecbx1728.600pk> </home/codespace/.texlive2023/texmf-var/fonts/pk/ljfour/jknappen/ec/tcrm1200.600pk> </home/codespace/.texlive2023/texmf-var/fonts/pk/ljfour/jknappen/ec/ecrm1200.600pk> </home/codespace/.texlive2023/texmf-var/fonts/pk/ljfour/jknappen/ec/ecbx1200.600pk> </home/codespace/.texlive2023/texmf-var/fonts/pk/ljfour/jknappen/ec/ecbx2488.600pk> </home/codespace/.texlive2023/texmf-var/fonts/pk/ljfour/jknappen/ec/ecrm1440.600pk> </home/codespace/.texlive2023/texmf-var/fonts/pk/ljfour/jknappen/ec/ecrm2074.600pk></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi12.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi6.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi8.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr12.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr8.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy8.pfb>
+Output written on Handbook.pdf (7 pages, 204970 bytes).
 PDF statistics:
- 183 PDF objects out of 1000 (max. 8388607)
- 66 compressed objects within 1 object stream
- 9 named destinations out of 1000 (max. 500000)
- 27 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 345 PDF objects out of 1000 (max. 8388607)
+ 123 compressed objects within 2 object streams
+ 16 named destinations out of 1000 (max. 500000)
+ 59 words of extra memory for PDF output out of 10000 (max. 10000000)
 

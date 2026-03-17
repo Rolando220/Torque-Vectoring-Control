@@ -1,5 +1,5 @@
 # Fdb version 4
-["pdflatex"] 1773226114.29686 "/workspaces/Torque-Vectoring-Control/Documents/Handbook.tex" "Handbook.pdf" "Handbook" 1773226114.6924 0
+["pdflatex"] 1773738523.8535 "/workspaces/Torque-Vectoring-Control/Documents/Handbook.tex" "Handbook.pdf" "Handbook" 1773738524.29741 0
   "/etc/texmf/web2c/texmf.cnf" 1773222094.50474 475 c0e671620eb5563b2130f56340a5fde8 ""
   "/home/codespace/.texlive2023/texmf-var/fonts/pk/ljfour/jknappen/ec/ecbx1200.600pk" 1773225886.46262 31928 52f8207592f60a2566677732099054da ""
   "/home/codespace/.texlive2023/texmf-var/fonts/pk/ljfour/jknappen/ec/ecbx1728.600pk" 1773225885.41262 49076 f38b6f6e48ae3564a7893d7a37d5c008 ""
@@ -27,6 +27,13 @@
   "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmsy10.tfm" 1136768653 1124 6c73e740cf17375f03eec0ee63599741 ""
   "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmsy6.tfm" 1136768653 1116 933a60c408fc0a863a92debe84b2d294 ""
   "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmsy8.tfm" 1136768653 1120 8b7d695260f3cff42e636090a8002094 ""
+  "/usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi12.pfb" 1248133631 36741 fa121aac0049305630cf160b86157ee4 ""
+  "/usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi6.pfb" 1248133631 37166 8ab3487cbe3ab49ebce74c29ea2418db ""
+  "/usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi8.pfb" 1248133631 35469 70d41d2b9ea31d5d813066df7c99281c ""
+  "/usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr12.pfb" 1248133631 32722 d7379af29a190c3f453aba36302ff5a9 ""
+  "/usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr8.pfb" 1248133631 32726 0a1aea6fcd6468ee2cf64d891f5c43c8 ""
+  "/usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb" 1248133631 32569 5e5ddc8df908dea60932f3c484a54c0d ""
+  "/usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy8.pfb" 1248133631 32626 4f5c1b83753b1dd3a97d1b399a005b4b ""
   "/usr/share/texlive/texmf-dist/tex/context/base/mkii/supp-pdf.mkii" 1461363279 71627 94eb9990bed73c364d7f53f960cc8c5b ""
   "/usr/share/texlive/texmf-dist/tex/generic/atbegshi/atbegshi.sty" 1575674566 24708 5584a51a7101caf7e6bbf1fc27d8f7b1 ""
   "/usr/share/texlive/texmf-dist/tex/generic/babel-english/english.ldf" 1496785618 7008 9ff5fdcc865b01beca2b0fe4a46231d4 ""
@@ -82,11 +89,11 @@
   "/usr/share/texmf/web2c/texmf.cnf" 1707919699 40399 f2c302f7d2af602abb742093540a5834 ""
   "/var/lib/texmf/fonts/map/pdftex/updmap/pdftex.map" 1773225725.60062 128028 f533b797fba58d231669ea19e894e23e ""
   "/var/lib/texmf/web2c/pdftex/pdflatex.fmt" 1773225756 6800793 0fed80cb3258321d4e4e28e9a1d40c46 ""
-  "/workspaces/Torque-Vectoring-Control/Documents/Handbook.tex" 1773226113.75061 3017 009d6284b4cfc5f415876679ab052cb2 ""
-  "Handbook.aux" 1773226114.64161 1054 7d9f70171ca2ab7675f99366fc4f92c2 "pdflatex"
-  "Handbook.out" 1773226114.64261 230 5b7547236f734db4c326c73b1a723b34 "pdflatex"
-  "Handbook.tex" 1773226113.75061 3017 009d6284b4cfc5f415876679ab052cb2 ""
-  "Handbook.toc" 1773226114.64261 172 226d73fd608059a97957105dc771d2a3 "pdflatex"
+  "/workspaces/Torque-Vectoring-Control/Documents/Handbook.tex" 1773738523.34415 7985 00da74717c2371d4b5662a22a2b66f11 ""
+  "Handbook.aux" 1773738524.23715 2089 d95679d02584e951f875f906fe1eda0a "pdflatex"
+  "Handbook.out" 1773738524.23815 1260 0d26f36649f6f4d34da35828a1015632 "pdflatex"
+  "Handbook.tex" 1773738523.34415 7985 00da74717c2371d4b5662a22a2b66f11 ""
+  "Handbook.toc" 1773738524.23815 564 f449e65990cc780f70a5436143735875 "pdflatex"
   "Images/TV_control_scheme.png" 1773221036.86678 16778 a4cf6b7f3c7168bccf321c33fe4a284c ""
   "Images/V-model.jpg" 1773221036.86678 51331 3b680a3ba7341beda8c150d98112257c ""
   (generated)

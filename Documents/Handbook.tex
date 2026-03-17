@@ -60,7 +60,7 @@ Regarding TV control architecture, most of the literature proposes a multilayer 
 
 A V-model design was adopted for the development of the TVC system. 
 As shown in Figure~\ref{fig:vmodel}, the left side of the V represents the decomposition of system requirements into more detailed specifications and design, while the right side represents the integration and verification of the system against those requirements.
-The objective of following this model is to make the control architecture more scalable over time, providing a structure in which the control scheme can be improved more easily in future developments.
+The goal of adopting this model is to make the control architecture more scalable over time, providing a structure in which the control scheme can be improved and extended more easily in the future.
 
 
 \IfFileExists{Images/V-model.jpg}{%
@@ -78,5 +78,53 @@ The objective of following this model is to make the control architecture more s
     \label{fig:vmodel_placeholder}
   \end{figure}
 }
+
+\section{Torque Vectoring Objectives}
+\label{sec:tv_objectives}
+
+The objectives of the implementation of a TVC system are the following:
+
+\begin{itemize}
+  \item \textbf{Handling Improvement:} Optimize turn-in and cornering performance. The system aims to make the vehicle track an ideal yaw rate computed by a reference model (Reference Generator), making steering response more reactive and compensating for chassis limitations.
+
+  \item \textbf{Understeer Reduction:} Racing vehicles may exhibit a natural understeer gradient or one induced by load transfers. By providing driving torque to the outer wheel and braking (regenerative) torque to the inner wheel, TV generates a yaw moment in the same direction as the turn, actively counteracting the tendency of the car to run wide and helping to tighten the steering line.
+
+  \item \textbf{Increased Stability in Limit Conditions:} During high-dynamic transient maneuvers, tires can quickly reach saturation (grip limit). TV, supported by an Anti-Skid (ASC) system, acts to promptly damp yaw-rate overshoot, preventing uncontrollable oversteer (spin) and keeping the vehicle on the trajectory desired by the driver.
+
+  \item \textbf{Optimal Exploitation of the Electric Powertrain:} Leverage the fast response of inverters and the ability to manage regenerative braking in a corner to modulate vehicle attitude in real time, a dynamic advantage not achievable with a traditional passive mechanical differential.
+\end{itemize}
+
+\chapter{Requirement Analysis and System Constraints}
+\label{chap:requirement_analysis}
+
+In accordance with the first descending phase of the V-Model, the design of the Torque Vectoring Control (TVC) requires a preliminary and rigorous analysis of system requirements. For the controller to be stable and effective, it is necessary to define the physical, dynamic, and regulatory boundaries within which the vehicle operates. These constraints can be divided into two macro-categories: grip limits related to vehicle dynamics and electromechanical limitations of the powertrain.
+
+\section{Vehicle Dynamics Limits and Tire Saturation}
+\label{sec:vehicle_dynamics_limits}
+
+The ideal yaw-rate reference generated for the controller is based on a linear single-track model. Although this model accurately describes vehicle behavior in linear conditions, it does not account for the decay of lateral tire forces at high slip angles.
+
+To prevent the controller from requesting physically infeasible maneuvers (which would cause instability and trigger invasive Anti-Skid intervention), the following dynamic requirements were defined:
+
+\begin{itemize}
+  \item \textbf{Lateral Acceleration Saturation:} The maximum lateral acceleration tolerable by the vehicle is strictly constrained by the estimated friction coefficient ($\mu$) and gravitational acceleration ($g$). The Reference Generator must include dynamic saturation so that the reference yaw rate never exceeds the physical limit $r_{\max} = \frac{\mu \cdot g}{v_x}$.
+
+  \item \textbf{Maneuver Targets:} The system must guarantee stability and responsiveness in maneuvers typical of Formula SAE tracks, which can include minimum curvature radii down to 4.5--5 m. This requires the system to handle large steering-wheel angles (up to and above 40 degrees) while keeping the vehicle in its maximum lateral-performance region.
+
+  \item \textbf{Understeer Gradient:} The chassis exhibits a natural understeer gradient that depends on static mass distribution and front/rear axle cornering stiffness. The TVC must generate a compensating yaw moment capable of canceling or mitigating the vehicle's intrinsic understeering/oversteering component, enforcing a predominantly neutral behavior.
+\end{itemize}
+
+\section{Powertrain Constraints and Actuation Limits}
+\label{sec:powertrain_constraints}
+
+Torque distribution strategies (Low-Level Controller or Torque Allocator) must strictly comply with the hardware specifications of the electric motors and inverters. Nominal parameters extracted from vehicle analysis impose the following actuation constraints:
+
+\begin{itemize}
+  \item \textbf{Maximum Drive Torque (Traction):} Each individual motor can deliver a maximum positive torque of $T_{drive,\max} = 400\,\mathrm{Nm}$.
+
+  \item \textbf{Maximum Braking Torque (Regenerative):} The regenerative torque limit absorbable by the inverter and battery pack is limited to $T_{regen,\max} = -25\,\mathrm{Nm}$ . This limit introduces strong actuation asymmetry: the TV capability to brake the inner wheel is significantly lower than its capability to push the outer wheel. The controller must be tuned to prevent integral-action wind-up when this limit is reached prematurely.
+\end{itemize}
+
+The identification of these limits provides the foundation for the subsequent design phases (High-Level Design), justifying the need to implement Anti-Windup logic in the PID and an Anti-Skid (ASC) system to manage grip losses caused by torque transients.
 
 \end{document}
