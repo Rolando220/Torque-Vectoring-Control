@@ -56,5 +56,20 @@ Wheel_Torques torque_allocator(float T_req_pilot, float Mz_ctrl){
 float reference_generator(float Vx, float steering_wheel_angle){
 
     float delta_steering = steering_wheel_angle * STEER_RATIO; // Convert steering wheel angle to actual wheel steering angle
+    float delta = steering_wheel_angle * STEER_RATIO; // Convert steering wheel angle to actual wheel steering angle
+
+    float vx_safe = max(abs(Vx), 1.0f); // Prevent division by zero or very low speeds
     
+    float r_linear = (Vx / (WHEELBASE * (1 + K_US * Vx * Vx))) * delta;
+
+    float ay_max = MU * G_GRAVITY; // Maximum lateral acceleration based on friction
+
+    float r_max = ay_max / vx_safe; // Maximum yaw rate based on maximum lateral acceleration
+    int r_sign = (r_linear > 0.0f) - (r_linear < 0.0f); // Sign of the linear yaw rate
+
+    if (abs(r_linear) > abs(r_max)) {
+        return r_sign * r_max; // Limit the reference yaw rate to the maximum
+    } else {
+        return r_linear; // Return the linear reference yaw rate if it's within limits
+    }
 }

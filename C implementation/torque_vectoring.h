@@ -12,7 +12,7 @@
 #define MU              1.0f    // Coefficient of friction
 #define G_GRAVITY       9.81f   // Gravitational acceleration (m/s^2)
 #define VEHICLE_MASS    300.0f  // Vehicle mass (kg)
-#define K_US 
+#define K_US            0.0008f // Understeering coefficient
 
 // Control limits
 
