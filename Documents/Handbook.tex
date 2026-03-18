@@ -21,6 +21,8 @@
 
 \begin{document}
 
+\setcounter{secnumdepth}{3}
+
 \maketitle
 
 \tableofcontents
@@ -126,5 +128,62 @@ Torque distribution strategies (Low-Level Controller or Torque Allocator) must s
 \end{itemize}
 
 The identification of these limits provides the foundation for the subsequent design phases (High-Level Design), justifying the need to implement Anti-Windup logic in the PID and an Anti-Skid (ASC) system to manage grip losses caused by torque transients.
+
+\chapter{System Architecture and Detailed Design}
+\label{chap:system_architecture}
+
+This chapter illustrates the logical architecture and the mathematical implementation of the Torque Vectoring Control (TVC) system. The controller design was developed following a modular top-down approach, allowing each component of the control chain to be isolated and validated individually.
+
+\section{Control Layout and Reference Scheme}
+\label{sec:control_layout_reference_scheme}
+
+As anticipated in the general scheme in Chapter~1 and shown in \hyperref[fig:tv_control_scheme]{Figure~\ref*{fig:tv_control_scheme}}, the architecture is based on a cascaded-loop structure. The driver input (steering angle and torque request) and vehicle state (speed, yaw rate) are processed sequentially by three macro-blocks:
+
+\begin{enumerate}
+  \item \textbf{Reference Generator:} Computes the ideal dynamic target.
+  \item \textbf{High-Level Controller:} Computes the corrective yaw moment ($M_z$).
+  \item \textbf{Low-Level Controller (Torque Allocator):} Distributes physical torque to the wheels.
+\end{enumerate}
+
+\section{Reference Generator}
+\label{sec:reference_generator}
+
+The reference generator is the dynamic brain of the system. Its task is to translate the driver's intent into a target yaw rate ($\dot{\psi}_{ref}$).
+
+The computation is based on the linear kinematic bicycle model, which depends on longitudinal speed ($v_x$), wheel steering angle ($\delta$), and the chassis understeer gradient ($K_{us}$):
+
+\[
+\dot{\psi}_{linear} = \frac{v_x \cdot \delta}{L + K_{us} \cdot v_x^2}
+\]
+
+The linear model assumes infinite tire grip, which is an unacceptable approximation in limit driving. To prevent the controller from requesting physically infeasible cornering, the signal is passed through a dynamic saturator based on the maximum tolerable lateral acceleration ($a_y = \mu \cdot g$). The final reference is therefore limited to:
+
+\[
+\dot{\psi}_{max} = \frac{\mu \cdot g}{v_x}
+\]
+
+If $\dot{\psi}_{linear}$ exceeds this limit, the system outputs $\dot{\psi}_{max}$, ensuring that targets remain within the friction ellipse.
+
+\section{High-Level Controller (Yaw Rate Control)}
+\label{sec:high_level_controller}
+
+The high-level controller has the task of nullifying the error between the desired yaw rate and the actual yaw rate measured by the IMU: $e = \dot{\psi}_{ref} - \dot{\psi}_{real}$.
+
+\subsection{Fujimoto Scheme}
+\label{subsec:fujimoto_scheme}
+
+The basic architecture is strongly inspired by the control scheme proposed by Fujimoto. This scheme employs a PI controller coupled with a Disturbance Observer (DOB) based on the derivative of the yaw rate, useful for rejecting external disturbances not predicted by the model (e.g., asymmetric grip variations) and includes cascaded Anti-Skid Control integration.
+
+\subsubsection{DOB Behavior and Simplification Strategy}
+\label{subsubsec:dob_behavior}
+
+During initial transient simulation phases (Step Steer maneuver), the high initial angular acceleration saturated the DOB, injecting a counteracting reaction that destabilized the vehicle. Adopting an iterative development approach, it was decided to temporarily exclude the Disturbance Observer branch, entrusting control to the PI loop alone. This configuration guarantees high baseline robustness, leaving the reintroduction of the DOB to future developments and tuning.
+
+\subsection{Anti-Windup (Clamping)}
+\label{subsec:anti_windup}
+
+Due to the thermal and mechanical asymmetry of the powertrain (traction capability of $+400\,\mathrm{Nm}$ against a much lower regenerative peak limit), actuators can saturate rapidly during aggressive cornering. To prevent wind-up phenomena (uncontrolled accumulation of integral action while motors are at their limit), an Anti-Windup system of Clamping type has been implemented.
+
+The system computes the maximum yaw moment theoretically generatable by the rear motors ($M_{z,\max}$); if the PI request exceeds this limit and the error has the same sign, the integral accumulator is temporarily frozen until returning to the linear region.
 
 \end{document}
