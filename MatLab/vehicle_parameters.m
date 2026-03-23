@@ -609,4 +609,4 @@ vp.Tbrakemax = 8000; % [Nm], SEH COME NO, numero grande perché è una roba diff
 vp.BB = 0.4; % [], brake balance se non è cambiato o ho sbagliato lato macchina :)))
 vp.Vmax = roots([-0.5*vp.rho*vp.Cx*vp.S,0,-vp.f*vp.m*vp.g,vp.Pmax]); % Metodo carino di calcolarsi la massima velocità del veicolo tenendo conto di resistenza aerodinamica e di rotolamento (ma tanto sta macchina non ha mai fatto più di 70 all'ora...)
 vp.Vmax = vp.Vmax(find(vp.Vmax==real(vp.Vmax),1)); % [m/s], questa è la velocità massima (da portare nei reali se il roots ha fatto danni)
-vp.Tregenmax = 25; % [Nm]
+vp.Tregenmax = 400; % [Nm]
