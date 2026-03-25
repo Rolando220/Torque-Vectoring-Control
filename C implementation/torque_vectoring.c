@@ -73,3 +73,70 @@ float reference_generator(float Vx, float steering_wheel_angle){
         return r_linear; // Return the linear reference yaw rate if it's within limits
     }
 }
+
+Wheel_Torques ASC(Wheel_Torques torques_in, float omega_left, float omega_right, float u){
+
+
+    Wheel_Torques torques_out = torques_in; // Initialize output torques with input values
+    float target_slip_abs = 0.11f; // Target slip ratio for maximum traction
+    int Kp = 500; // Proportional gain for slip control
+
+    float slip_RL = 0.0f;
+    float slip_RR = 0.0f;
+    float target_slip = 0.0f;
+
+    float V_wheel_RL = omega_left * WHEEL_RADIUS;
+
+    if (fabsf(V_wheel_RL) < 0.1f){
+        slip_RL = 0.0f; // Prevent division by zero at very low speeds
+    }
+    else {
+        slip_RL = (u - V_wheel_RL) / V_wheel_RL; // Slip ratio for rear left wheel
+    }
+
+
+    if (fabsf(slip_RL) > target_slip_abs) {
+
+        if (slip_RL < 0.0f){
+            target_slip = -target_slip_abs;
+        }
+        else{
+            target_slip = target_slip_abs;
+        }
+
+        float error_slip = target_slip - slip_RL; // Slip error
+        float T_cut = Kp * error_slip; // Torque reduction based on slip error
+        torques_out.T_left -= T_cut; // Reduce torque on rear left wheel
+
+    }
+
+    if (torques_out.T_left < -T_REGEN_MAX) { torques_out.T_left = -T_REGEN_MAX; } // Limit regenerative braking torque
+
+    float V_wheel_RR = omega_right * WHEEL_RADIUS;
+
+    if (fabsf(V_wheel_RR) < 0.1f){
+        slip_RR = 0.0f; // Prevent division by zero at very low speeds
+    }
+    else {
+        slip_RR = (u - V_wheel_RR) / V_wheel_RR; // Slip ratio for rear right wheel
+    }
+
+    if (fabsf(slip_RR) > target_slip_abs) {
+
+        if (slip_RR < 0.0f){
+            target_slip = -target_slip_abs;
+        }
+        else{
+            target_slip = target_slip_abs;
+        }
+
+        float error_slip = target_slip - slip_RR; // Slip error
+        float T_cut = Kp * error_slip; // Torque reduction based on slip error
+        torques_out.T_right -= T_cut; // Reduce torque on rear right wheel
+
+    }
+
+    if (torques_out.T_right < -T_REGEN_MAX) { torques_out.T_right = -T_REGEN_MAX; } // Limit regenerative braking torque
+
+    return torques_out;
+}

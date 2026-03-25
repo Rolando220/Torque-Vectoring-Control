@@ -75,7 +75,7 @@ Kp_array = zeros(size(Vx_array));
 Ki_array = zeros(size(Vx_array));
 
 % Fissiamo il Kp che ci ha dato la dinamica ottimale (es. 0.2s di assestamento)
-Kp_target = 1000; 
+Kp_target = 2000; 
 
 disp('--- GAIN SCHEDULING: TABELLA LUT ---');
 
