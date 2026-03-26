@@ -35,6 +35,7 @@ typedef struct {
 
 // Function prototypes
 
+void  PID_Init(PID_State *pid, float Kp, float Ki, float Kd, float dt);
 float TV_PID(float yaw_rate_ref, float yaw_rate_actual, PID_State *pid);
 Wheel_Torques torque_allocator(float T_req_pilot, float Mz_ctrl);
 float reference_generator(float Vx, float steering_wheel_angle);
