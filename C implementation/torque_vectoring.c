@@ -1,12 +1,52 @@
 #include "torque_vectoring.h"
 #include <math.h>
 
+// Numero di punti nella nostra LUT
+#define LUT_SIZE 30
+
+// Array delle velocità (Vx in m/s) - Da 1 a 30 in ordine crescente
+static const float Vx_LUT[LUT_SIZE] = {
+    1.0f,  2.0f,  3.0f,  4.0f,  5.0f,  6.0f,  7.0f,  8.0f,  9.0f,  10.0f,
+    11.0f, 12.0f, 13.0f, 14.0f, 15.0f, 16.0f, 17.0f, 18.0f, 19.0f, 20.0f,
+    21.0f, 22.0f, 23.0f, 24.0f, 25.0f, 26.0f, 27.0f, 28.0f, 29.0f, 30.0f
+};
+
+// Array dei Ki calcolati da MATLAB (Gain Scheduling Analitico)
+static const float Ki_LUT[LUT_SIZE] = {
+    779061.4f, 388307.3f, 257523.4f, 191744.0f, 151979.2f, 
+    125234.3f, 105941.2f, 91316.7f,  79814.6f,  70507.4f,
+    62804.3f,  56311.3f,  50755.2f,  45940.5f,  41723.3f, 
+    37995.6f,  34674.1f,  31694.1f,  29004.0f,  26562.3f,
+    24335.5f,  22295.6f,  20419.6f,  18688.1f,  17084.8f, 
+    15595.7f,  14208.8f,  12913.8f,  11701.9f,  10565.0f
+};
+
 void  PID_Init(PID_State *pid, float Kp, float Ki, float Kd, float dt){
     pid->Kp = Kp;
     pid->Ki = Ki;
     pid->Kd = Kd;
     pid->integral_acc = 0.0f; // Initialize integral accumulator to zero
     pid->dt = dt;
+}
+
+float interpolate_KI(float Vx){
+    // 1. Protection against out-of-bounds
+    if (Vx <= Vx_LUT[0]) {
+        return Ki_LUT[0];
+    }
+    if (Vx >= Vx_LUT[LUT_SIZE - 1]) {
+        return Ki_LUT[LUT_SIZE - 1];
+    }
+
+    for (int i = 0; i < LUT_SIZE - 1; i++) {
+        if (Vx >= Vx_LUT[i] && Vx <= Vx_LUT[i + 1]) {
+            // Linear interpolation
+            float slope = (Ki_LUT[i + 1] - Ki_LUT[i]) / (Vx_LUT[i + 1] - Vx_LUT[i]);
+            return Ki_LUT[i] + slope * (Vx - Vx_LUT[i]);
+        }
+    }
+
+    return Ki_LUT[0]; // Default return (should never reach here due to bounds check)
 }
 
 float TV_PID(float yaw_rate_ref, float yaw_rate_actual, PID_State *pid) {
