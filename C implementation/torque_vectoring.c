@@ -49,6 +49,16 @@ float interpolate_KI(float Vx){
     return Ki_LUT[0]; // Default return (should never reach here due to bounds check)
 }
 
+float LPF(float input, float* prev_output, float tau, float dt) {
+
+    float alpha = dt / (tau + dt); // Calculate the filter coefficient
+    
+    float output = *prev_output + alpha * (input - *prev_output); // Apply the low-pass filter formula
+
+    *prev_output = output; // Update the previous output for the next iteration
+    return output; // Return the filtered output
+}
+
 float TV_PID(float yaw_rate_ref, float yaw_rate_actual, PID_State *pid) {
     // Calculate error
     float error = yaw_rate_ref - yaw_rate_actual;

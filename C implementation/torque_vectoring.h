@@ -37,6 +37,7 @@ typedef struct {
 
 void  PID_Init(PID_State *pid, float Kp, float Ki, float Kd, float dt);
 float interpolate_KI(float Vx);
+float LPF(float input, float* prev_output, float tau, float dt);
 float TV_PID(float yaw_rate_ref, float yaw_rate_actual, PID_State *pid);
 Wheel_Torques torque_allocator(float T_req_pilot, float Mz_ctrl);
 float reference_generator(float Vx, float steering_wheel_angle);
