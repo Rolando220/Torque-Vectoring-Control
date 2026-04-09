@@ -199,3 +199,19 @@ Wheel_Torques ASC(Wheel_Torques torques_in, float omega_left, float omega_right,
 
     return torques_out;
 }
+
+Wheel_Torques TVC_Main(float Vx, float steering_wheel_angle, float T_req_pilot, float raw_gyro_z, float omega_left,
+                        float omega_right, float dt, PID_State *pid, float *prev_yaw_ref_filtered, float *prev_gyro_filtered){
+
+                            // 1. Manipulation yaw rate signal from IMU
+
+                            // 2. Generate yaw rate reference
+
+                            float raw_yaw_ref = reference_generator(Vx, steering_wheel_angle);
+
+                            // Filtering the reference yaw rate to avoid abrupt changes
+
+                            float tau_ref = 0.05f;
+                            float yaw_rate_ref = LPF(raw_yaw_ref, prev_yaw_ref_filtered, tau_ref, dt);
+
+                        }
