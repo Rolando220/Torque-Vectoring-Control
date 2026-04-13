@@ -200,10 +200,15 @@ Wheel_Torques ASC(Wheel_Torques torques_in, float omega_left, float omega_right,
     return torques_out;
 }
 
-Wheel_Torques TVC_Main(float Vx, float steering_wheel_angle, float T_req_pilot, float raw_gyro_z, float omega_left,
-                        float omega_right, float dt, PID_State *pid, float *prev_yaw_ref_filtered, float *prev_gyro_filtered){
+Inverter_Currents TVC_Main(float Vx, float steering_wheel_angle, float T_req_pilot, float raw_gyro_z, float omega_left,
+                            float omega_right, float dt, PID_State *pid, float *prev_yaw_ref_filtered, float *prev_gyro_filtered){
 
-                            // 1. Manipulation yaw rate signal from IMU
+                            // 1. TODO: Manipulation yaw rate signal from IMU
+
+                            float tau_gyro = 0.01f; // Time constant for gyro low-pass filter
+
+                            float gyro_z_corrected = raw_gyro_z - GYRO_Z_BIAS; // Correct for gyro bias
+                            float yaw_rate_actual = LPF(gyro_z_corrected, prev_gyro_filtered, tau_gyro, dt); // Filter the yaw rate signal to reduce noise
 
                             // 2. Generate yaw rate reference
 
@@ -211,7 +216,42 @@ Wheel_Torques TVC_Main(float Vx, float steering_wheel_angle, float T_req_pilot, 
 
                             // Filtering the reference yaw rate to avoid abrupt changes
 
-                            float tau_ref = 0.05f;
+                            float tau_ref = 0.02f;
                             float yaw_rate_ref = LPF(raw_yaw_ref, prev_yaw_ref_filtered, tau_ref, dt);
 
+                            // 4. Gain scheduling for Ki based on current speed
+
+                            pid->Ki = interpolate_KI(Vx);
+
+                            // 5. Fade-out of the control action at low speeds
+
+                            float fade_multiplier = 1.0f;
+                            if (Vx < 3.0f) {
+                                fade_multiplier = 0.0f; // Off below 3 m/s
+                            } else if (Vx < 5.0f) {
+                                fade_multiplier = (Vx - 3.0f) / (5.0f - 3.0f); // Linear ramp from 0 to 1 between 3 and 5 m/s
+                            }
+
+                            // 6. Compute Mz control action using PID controller
+
+                            float Mz_ctrl = TV_PID(yaw_rate_ref, yaw_rate_actual, pid);
+                            Mz_ctrl *= fade_multiplier; // Apply fade-out at low speeds
+
+                            // 7. Allocate torques to left and right wheels
+
+                            Wheel_Torques torques_allocated = torque_allocator(T_req_pilot, Mz_ctrl);
+
+                            // 8. Apply ASC for traction control
+
+                            Wheel_Torques torques_final = ASC(torques_allocated, omega_left, omega_right, Vx);
+
+                            // 9. TODO: Manage the regenerative braking
+
+                            // 10. Torques to current for the VCU
+
+                            Inverter_Currents currents_out;
+                            currents_out.current_left = torques_final.T_left / (MOTOR_KT * GEAR_RATIO);
+                            currents_out.current_right = torques_final.T_right / (MOTOR_KT * GEAR_RATIO);
+
+                            return currents_out;
                         }

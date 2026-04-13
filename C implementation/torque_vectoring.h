@@ -16,7 +16,16 @@
 
 // Control limits
 
-#define MZ_MAX          1897.0f  // Maximum yaw moment (Nm)
+#define MZ_MAX          1897.0f // Maximum yaw moment (Nm)
+
+// IMU signal processing
+
+#define GYRO_Z_BIAS       0.0f  // Gyro bias for yaw rate (deg/s)
+
+// Powertrain costants
+
+#define GEAR_RATIO       5.0f    // Gear ratio
+#define MOTOR_KT         0.54f   // Motor torque constant (Nm/A)
 
 // Control structs
 
@@ -33,6 +42,11 @@ typedef struct {
     float T_right;  // Torque command for right wheel (Nm)
 } Wheel_Torques;
 
+typedef struct {
+    float current_left;   // Current command for left wheel (A)
+    float current_right;  // Current command for right wheel (A)
+} Inverter_Currents;
+
 // Function prototypes
 
 void  PID_Init(PID_State *pid, float Kp, float Ki, float Kd, float dt);
@@ -42,5 +56,7 @@ float TV_PID(float yaw_rate_ref, float yaw_rate_actual, PID_State *pid);
 Wheel_Torques torque_allocator(float T_req_pilot, float Mz_ctrl);
 float reference_generator(float Vx, float steering_wheel_angle);
 Wheel_Torques ASC(Wheel_Torques torques_in, float omega_left, float omega_right, float u);
+Inverter_Currents TVC_Main(float Vx, float steering_wheel_angle, float T_req_pilot, float raw_gyro_z, float omega_left,
+                        float omega_right, float dt, PID_State *pid, float *prev_yaw_ref_filtered, float *prev_gyro_filtered);
 
 #endif
