@@ -200,6 +200,47 @@ Wheel_Torques ASC(Wheel_Torques torques_in, float omega_left, float omega_right,
     return torques_out;
 }
 
+Brake_Blending_Output brake_blending(float brake_pedal, float I_max_regen){
+
+    Brake_Blending_Output out = {0.0f, 0.0f, 0.0f, IDEAL_FRONT_BIAS};
+
+    if(brake_pedal <= BRAKE_DEADZONE){
+        return out;                                 // No braking if pedal is in the deadzone
+    }
+
+    float T_brake_total = - brake_pedal * K_BRAKE;    // Total braking torque requested by the driver
+
+    // Calculate ideal braking torques based on ideal front bias
+
+    float ideal_front = T_brake_total * IDEAL_FRONT_BIAS;
+    float ideal_rear = T_brake_total * (1.0f - IDEAL_FRONT_BIAS);
+
+    // Calculate maximum regenerative braking torque
+
+    float T_regen_max = - I_max_regen * MOTOR_KT * GEAR_RATIO;
+
+    // Calculate actual regenerative braking torque (limited by max regen torque)
+
+    out.T_regen_TV = fmaxf(T_regen_max, ideal_rear);
+
+    // Calculate mechanical braking
+
+    out.T_brake_front = ideal_front; // All front braking is mechanical
+    out.T_brake_rear = ideal_rear - out.T_regen_TV; // Rear mechanical braking is what's left after regen
+
+    // Calculate the mechanical bias requested to achieve the ideal distribution
+    float total_mech = out.T_brake_front + out.T_brake_rear;
+    if(total_mech < -1.0f){ // Avoid division by zero and ensure we have some mechanical braking
+        out.mech_bias_requested = out.T_brake_front / total_mech; // Mechanical bias as a ratio of front mechanical braking
+    }
+    else{
+        out.mech_bias_requested = IDEAL_FRONT_BIAS; // If no mechanical braking is needed, return ideal bias
+    }
+
+    return out;
+
+}
+
 Inverter_Currents TVC_Main(float Vx, float steering_wheel_angle, float T_req_pilot, float raw_gyro_z, float omega_left,
                             float omega_right, float dt, PID_State *pid, float *prev_yaw_ref_filtered, float *prev_gyro_filtered){
 

@@ -27,6 +27,12 @@
 #define GEAR_RATIO       5.0f    // Gear ratio
 #define MOTOR_KT         0.54f   // Motor torque constant (Nm/A)
 
+// Braking costants
+
+#define IDEAL_FRONT_BIAS       0.6f    // 60 Front - 40 Rear
+#define BRAKE_DEADZONE         0.05f   // Minimum brake pedal input to avoid noise
+#define K_BRAKE                1000.0f // Gain to convert brake pedal input to torque
+
 // Control structs
 
 typedef struct {
@@ -47,6 +53,16 @@ typedef struct {
     float current_right;  // Current command for right wheel (A)
 } Inverter_Currents;
 
+// Struct for brake blending controller
+
+typedef struct {
+    float T_regen_TV;
+    float T_brake_front;
+    float T_brake_rear;
+    float mech_bias_requested;
+} Brake_Blending_Output;
+
+
 // Function prototypes
 
 void  PID_Init(PID_State *pid, float Kp, float Ki, float Kd, float dt);
@@ -56,6 +72,7 @@ float TV_PID(float yaw_rate_ref, float yaw_rate_actual, PID_State *pid);
 Wheel_Torques torque_allocator(float T_req_pilot, float Mz_ctrl);
 float reference_generator(float Vx, float steering_wheel_angle);
 Wheel_Torques ASC(Wheel_Torques torques_in, float omega_left, float omega_right, float u);
+Brake_Blending_Output brake_blending(float brake_pedal, float I_max_regen);
 Inverter_Currents TVC_Main(float Vx, float steering_wheel_angle, float T_req_pilot, float raw_gyro_z, float omega_left,
                         float omega_right, float dt, PID_State *pid, float *prev_yaw_ref_filtered, float *prev_gyro_filtered);
 
