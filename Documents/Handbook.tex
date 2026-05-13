@@ -172,12 +172,65 @@ The high-level controller has the task of nullifying the error between the desir
 \subsection{Fujimoto Scheme}
 \label{subsec:fujimoto_scheme}
 
-The basic architecture is strongly inspired by the control scheme proposed by Fujimoto. This scheme employs a PI controller coupled with a Disturbance Observer (DOB) based on the derivative of the yaw rate, useful for rejecting external disturbances not predicted by the model (e.g., asymmetric grip variations) and includes cascaded Anti-Skid Control integration.
+The basic architecture is strongly inspired by the control scheme proposed by Fujimoto, as shown in Figure~\ref{fig:fujimoto_scheme}.
+
+\IfFileExists{Images/fujimoto.jpeg}{%
+  \begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.8\textwidth]{Images/fujimoto.jpeg}
+    \caption{Fujimoto control scheme}
+    \label{fig:fujimoto_scheme}
+  \end{figure}
+}{%
+  \begin{figure}[htbp]
+    \centering
+    \fbox{\parbox{0.8\textwidth}{\centering [fujimoto.jpeg not found — add the image file to the `Images` folder]}}
+    \caption{Fujimoto control scheme (placeholder)}
+    \label{fig:fujimoto_scheme_placeholder}
+  \end{figure}
+}
+
+This scheme employs a PI controller coupled with a Disturbance Observer (DOB) based on the derivative of the yaw rate, useful for rejecting external disturbances not predicted by the model (e.g., asymmetric grip variations) and includes cascaded Anti-Skid Control integration.
 
 \subsubsection{DOB Behavior and Simplification Strategy}
 \label{subsubsec:dob_behavior}
 
-During initial transient simulation phases (Step Steer maneuver), the high initial angular acceleration saturated the DOB, injecting a counteracting reaction that destabilized the vehicle. Adopting an iterative development approach, it was decided to temporarily exclude the Disturbance Observer branch, entrusting control to the PI loop alone. This configuration guarantees high baseline robustness, leaving the reintroduction of the DOB to future developments and tuning.
+During initial transient simulation phases, the high initial angular acceleration saturated the DOB, injecting a counteracting reaction that destabilized the vehicle. Adopting an iterative development approach, it was decided to temporarily exclude the Disturbance Observer branch, entrusting control to the PI loop alone. This configuration guarantees high baseline robustness, leaving the reintroduction of the DOB to future developments and tuning.
+
+\subsection{PI: Gain Scheduling}
+\label{subsec:pi_gain_scheduling}
+
+Although the Proportional-Integral (PI) controller structure is standard, the vehicle lateral dynamics are strongly nonlinear and vary significantly with longitudinal speed. A controller tuned with fixed gains for high speeds would be too sluggish at low speeds, while one tuned for low speeds would make the vehicle unstable in fast sections.
+
+To solve this problem, a Gain Scheduling strategy was implemented. The parameter computation procedure was based on the study of the poles of the linearized system. The dynamic analysis showed that, especially at low speeds, the vehicle exhibits ``slow'' poles that make the system response sluggish and poorly reactive.
+
+To maximize performance, the integral gain ($K_i$) was computed analytically for each operating point with the goal of cancelling the slow pole of the system. This synthesis technique makes it possible to replace the natural vehicle dynamics with a much faster closed-loop response, while maintaining a constant damping ratio over the entire speed range.
+
+The results of this study, carried out in MATLAB, were exported to a Look-Up Table (LUT). During execution on the VCU, the controller reads the current longitudinal speed and linearly interpolates the table values, dynamically updating the $K_i$ value. This ensures that the controlled system always maintains the same response readiness and stability, regardless of driving speed.
+
+\subsubsection{LUT Details}
+\label{subsubsec:lut_details}
+
+The Gain Scheduling map was generated for longitudinal speeds from $1\,\mathrm{m/s}$ to $30\,\mathrm{m/s}$, using a uniform step of $1\,\mathrm{m/s}$. This discretization provides a dense and regular grid of operating points, enabling stable linear interpolation of $K_i$ during real-time execution on the VCU.
+
+Table~\ref{tab:ki_lut_last5} reports an example subset of the implemented LUT, showing the last five speed entries and their corresponding integral gains.
+
+\begin{table}[htbp]
+  \centering
+  \caption{Example of last five entries of the implemented $K_i$ LUT}
+  \label{tab:ki_lut_last5}
+  \begin{tabular}{cc}
+    \hline
+    $V_x$ [m/s] & $K_i$ [-] \\
+    \hline
+    26 & 15595.7 \\
+    27 & 14208.8 \\
+    28 & 12913.8 \\
+    29 & 11701.9 \\
+    30 & 10565.0 \\
+    \hline
+  \end{tabular}
+\end{table}
 
 \subsection{Anti-Windup (Clamping)}
 \label{subsec:anti_windup}

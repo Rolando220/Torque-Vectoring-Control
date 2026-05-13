@@ -10,5 +10,7 @@
 \contentsline {section}{\numberline {3.2}Reference Generator}{7}{section.3.2}%
 \contentsline {section}{\numberline {3.3}High-Level Controller (Yaw Rate Control)}{8}{section.3.3}%
 \contentsline {subsection}{\numberline {3.3.1}Fujimoto Scheme}{8}{subsection.3.3.1}%
-\contentsline {subsubsection}{\numberline {3.3.1.1}DOB Behavior and Simplification Strategy}{8}{subsubsection.3.3.1.1}%
-\contentsline {subsection}{\numberline {3.3.2}Anti-Windup (Clamping)}{9}{subsection.3.3.2}%
+\contentsline {subsubsection}{\numberline {3.3.1.1}DOB Behavior and Simplification Strategy}{9}{subsubsection.3.3.1.1}%
+\contentsline {subsection}{\numberline {3.3.2}PI: Gain Scheduling}{9}{subsection.3.3.2}%
+\contentsline {subsubsection}{\numberline {3.3.2.1}LUT Details}{10}{subsubsection.3.3.2.1}%
+\contentsline {subsection}{\numberline {3.3.3}Anti-Windup (Clamping)}{10}{subsection.3.3.3}%
