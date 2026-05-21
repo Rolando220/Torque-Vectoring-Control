@@ -200,49 +200,101 @@ Wheel_Torques ASC(Wheel_Torques torques_in, float omega_left, float omega_right,
     return torques_out;
 }
 
-Brake_Blending_Output brake_blending(float brake_pedal, float I_max_regen){
+float get_max_regen_current(float SoC){
 
-    Brake_Blending_Output out = {0.0f, 0.0f, 0.0f, IDEAL_FRONT_BIAS};
+    if (SoC >= 90.0f) return 0.0f;       
+    if (SoC >= 70.0f) return 50.0f;
+    if (SoC >= 40.0f) return 100.0f;
+    if (SoC >= 20.0f) return 150.0f;
+    return 200.0f;                       
 
-    if(brake_pedal <= BRAKE_DEADZONE){
+}
+
+Brake_Blending_Output brake_blending(float brake_pedal_front, float bb_desired_pilot, float bb_actual, float SoC){
+
+    Brake_Blending_Output out = {0.0f, 0.0f, 0.0f, bb_desired_pilot};
+
+    if(brake_pedal_front <= BRAKE_DEADZONE){
         return out;                                 // No braking if pedal is in the deadzone
     }
 
-    float T_brake_total = - brake_pedal * K_BRAKE;    // Total braking torque requested by the driver
+    // Calculate mechanical actual braking torques
 
-    // Calculate ideal braking torques based on ideal front bias
+    float T_mech_front = - (brake_pedal_front * K_BRAKE); // Mechanical braking torque from front brake pedal input
 
-    float ideal_front = T_brake_total * IDEAL_FRONT_BIAS;
-    float ideal_rear = T_brake_total * (1.0f - IDEAL_FRONT_BIAS);
+    float T_mech_total = T_mech_front / bb_actual; // Total mechanical braking torque based on actual bias
+    float T_mech_rear_actual = T_mech_total - T_mech_front; // Mechanical braking torque needed at the rear to achieve the actual bias
 
-    // Calculate maximum regenerative braking torque
+    // Calculate desired braking torques based on the desired bias by the pilot
 
-    float T_regen_max = - I_max_regen * MOTOR_KT * GEAR_RATIO;
+    float T_total_target = T_mech_total / bb_desired_pilot; // Total braking torque needed to achieve the desired bias
+    float T_rear_target = T_total_target - T_mech_front; // Desired rear braking torque to achieve the desired bias
+
+    // Maximum regenerative braking torque based on SoC
+
+    float I_q_max = get_max_regen_current(SoC);
+    float T_regen_max = I_q_max * MOTOR_KT * GEAR_RATIO * 2.0f; // Convert max regen current to max regen torque
+
+    // Actual regenerative braking torque needed to achieve the desired bias
+
+    float T_regen_needed = T_rear_target - T_mech_rear_actual; 
+
+    if (T_regen_needed > 0.0f) {
+        T_regen_needed = 0.0f;
+    }
 
     // Calculate actual regenerative braking torque (limited by max regen torque)
 
-    out.T_regen_TV = fmaxf(T_regen_max, ideal_rear);
+    out.T_regen_TV = fmaxf(T_regen_max, T_regen_needed);
 
     // Calculate mechanical braking
 
-    out.T_brake_front = ideal_front; // All front braking is mechanical
-    out.T_brake_rear = ideal_rear - out.T_regen_TV; // Rear mechanical braking is what's left after regen
+    float T_mech_rear_target = T_rear_target - T_regen_max;
+    
+    if (T_mech_rear_target > 0.0f) { 
+        T_mech_rear_target = 0.0f; // I freni meccanici non possono spingere
+    }
 
-    // Calculate the mechanical bias requested to achieve the ideal distribution
-    float total_mech = out.T_brake_front + out.T_brake_rear;
-    if(total_mech < -1.0f){ // Avoid division by zero and ensure we have some mechanical braking
-        out.mech_bias_requested = out.T_brake_front / total_mech; // Mechanical bias as a ratio of front mechanical braking
+    float total_mech_target = T_mech_front + T_mech_rear_target;
+
+    if (total_mech_target < -1.0f) { // Protezione divisione per zero
+        out.mech_bias_requested = T_mech_front / total_mech_target;
+    } else {
+        out.mech_bias_requested = bb_desired_pilot;
     }
-    else{
-        out.mech_bias_requested = IDEAL_FRONT_BIAS; // If no mechanical braking is needed, return ideal bias
-    }
+
+    // Limiti fisici di sicurezza per la richiesta al motorino meccanico
+    if (out.mech_bias_requested > 0.80f) out.mech_bias_requested = 0.84f;
+    if (out.mech_bias_requested < 0.40f) out.mech_bias_requested = 0.60f;
+
+    // Output per logging o altri calcoli
+    out.T_brake_front = T_mech_front;
+    out.T_brake_rear = T_mech_rear_actual;
 
     return out;
 
 }
 
-Inverter_Currents TVC_Main(float Vx, float steering_wheel_angle, float T_req_pilot, float raw_gyro_z, float omega_left,
+TV_Output TVC_Main(float throttle, float brake_pedal, float Vx, float steering_wheel_angle, float raw_gyro_z, float omega_left,
                             float omega_right, float dt, PID_State *pid, float *prev_yaw_ref_filtered, float *prev_gyro_filtered){
+
+                            TV_Output out;
+                            float T_req_pilot = 0.0f;
+
+                            // I_q_max = funzione();
+
+                            if(brake_pedal > BRAKE_DEADZONE){
+                                //out.brake_cmds = brake_blending(brake_pedal, I_q_max);
+                                T_req_pilot = out.brake_cmds.T_regen_TV;
+                            }
+                            else{
+
+                                T_req_pilot = throttle * K_THROTTLE; // Convert throttle input to total torque request    
+                                out.brake_cmds.T_regen_TV = 0.0f;
+                                out.brake_cmds.T_brake_front = 0.0f;
+                                out.brake_cmds.T_brake_rear = 0.0f;
+                                out.brake_cmds.mech_bias_requested = IDEAL_FRONT_BIAS;
+                            }
 
                             // 1. TODO: Manipulation yaw rate signal from IMU
 
@@ -290,9 +342,8 @@ Inverter_Currents TVC_Main(float Vx, float steering_wheel_angle, float T_req_pil
 
                             // 10. Torques to current for the VCU
 
-                            Inverter_Currents currents_out;
-                            currents_out.current_left = torques_final.T_left / (MOTOR_KT * GEAR_RATIO);
-                            currents_out.current_right = torques_final.T_right / (MOTOR_KT * GEAR_RATIO);
+                            out.currents.current_left = torques_final.T_left / (MOTOR_KT * GEAR_RATIO);
+                            out.currents.current_right = torques_final.T_right / (MOTOR_KT * GEAR_RATIO);
 
-                            return currents_out;
+                            return out;
                         }

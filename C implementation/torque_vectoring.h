@@ -31,7 +31,11 @@
 
 #define IDEAL_FRONT_BIAS       0.6f    // 60 Front - 40 Rear
 #define BRAKE_DEADZONE         0.05f   // Minimum brake pedal input to avoid noise
-#define K_BRAKE                1000.0f // Gain to convert brake pedal input to torque
+#define K_BRAKE                107700.0f // Gain to convert brake pedal input to torque
+
+// Throttle costants
+
+#define K_THROTTLE             400.0f // Gain to convert throttle input to total torque request
 
 // Control structs
 
@@ -53,6 +57,11 @@ typedef struct {
     float current_right;  // Current command for right wheel (A)
 } Inverter_Currents;
 
+typedef struct {
+    Inverter_Currents currents;
+    Brake_Blending_Output brake_cmds;
+} TV_Output;
+
 // Struct for brake blending controller
 
 typedef struct {
@@ -72,8 +81,9 @@ float TV_PID(float yaw_rate_ref, float yaw_rate_actual, PID_State *pid);
 Wheel_Torques torque_allocator(float T_req_pilot, float Mz_ctrl);
 float reference_generator(float Vx, float steering_wheel_angle);
 Wheel_Torques ASC(Wheel_Torques torques_in, float omega_left, float omega_right, float u);
-Brake_Blending_Output brake_blending(float brake_pedal, float I_max_regen);
-Inverter_Currents TVC_Main(float Vx, float steering_wheel_angle, float T_req_pilot, float raw_gyro_z, float omega_left,
+float get_max_regen_current(float SoC);
+Brake_Blending_Output brake_blending(float brake_pedal_front, float bb_desired_pilot, float bb_actual, float SoC);
+TV_Output TVC_Main(float throttle, float brake_pedal, float Vx, float steering_wheel_angle, float raw_gyro_z, float omega_left,
                         float omega_right, float dt, PID_State *pid, float *prev_yaw_ref_filtered, float *prev_gyro_filtered);
 
 #endif
