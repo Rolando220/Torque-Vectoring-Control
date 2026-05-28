@@ -52,6 +52,13 @@ typedef struct {
     float T_right;  // Torque command for right wheel (Nm)
 } Wheel_Torques;
 
+// Struct for ASC wheel velocities targets
+
+typedef struct {
+    float v_target_L;
+    float v_target_R;
+} Wheel_Targets;
+
 typedef struct {
     float current_left;   // Current command for left wheel (A)
     float current_right;  // Current command for right wheel (A)
@@ -59,17 +66,17 @@ typedef struct {
 
 typedef struct {
     Inverter_Currents currents;
-    Brake_Blending_Output brake_cmds;
+    // Brake_Blending_Output brake_cmds;
 } TV_Output;
 
 // Struct for brake blending controller
 
-typedef struct {
-    float T_regen_TV;
-    float T_brake_front;
-    float T_brake_rear;
-    float mech_bias_requested;
-} Brake_Blending_Output;
+// typedef struct {
+//     float T_regen_TV;
+//     float T_brake_front;
+//     float T_brake_rear;
+//     float mech_bias_requested;
+// } Brake_Blending_Output;
 
 
 // Function prototypes
@@ -80,9 +87,11 @@ float LPF(float input, float* prev_output, float tau, float dt);
 float TV_PID(float yaw_rate_ref, float yaw_rate_actual, PID_State *pid);
 Wheel_Torques torque_allocator(float T_req_pilot, float Mz_ctrl);
 float reference_generator(float Vx, float steering_wheel_angle);
-Wheel_Torques ASC(Wheel_Torques torques_in, float omega_left, float omega_right, float u);
+Wheel_Targets get_wheel_targets(float u, float yaw_rate_actual);
+float calculate_slip_factor(float v_wheel, float v_target, float slip_threshold_abs);
+Wheel_Torques ASC_Advanced(Wheel_Torques torques_in, float omega_left, float omega_right, float u, float yaw_rate_actual);
 float get_max_regen_current(float SoC);
-Brake_Blending_Output brake_blending(float brake_pedal_front, float bb_desired_pilot, float bb_actual, float SoC);
+// Brake_Blending_Output brake_blending(float brake_pedal_front, float bb_desired_pilot, float bb_actual, float SoC);
 TV_Output TVC_Main(float throttle, float brake_pedal, float Vx, float steering_wheel_angle, float raw_gyro_z, float omega_left,
                         float omega_right, float dt, PID_State *pid, float *prev_yaw_ref_filtered, float *prev_gyro_filtered);
 

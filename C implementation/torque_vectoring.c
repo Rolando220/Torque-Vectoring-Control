@@ -1,17 +1,17 @@
 #include "torque_vectoring.h"
 #include <math.h>
 
-// Numero di punti nella nostra LUT
+// Number of points in our LUT
 #define LUT_SIZE 30
 
-// Array delle velocità (Vx in m/s) - Da 1 a 30 in ordine crescente
+// Speed array (Vx in m/s) - From 1 to 30 in ascending order
 static const float Vx_LUT[LUT_SIZE] = {
     1.0f,  2.0f,  3.0f,  4.0f,  5.0f,  6.0f,  7.0f,  8.0f,  9.0f,  10.0f,
     11.0f, 12.0f, 13.0f, 14.0f, 15.0f, 16.0f, 17.0f, 18.0f, 19.0f, 20.0f,
     21.0f, 22.0f, 23.0f, 24.0f, 25.0f, 26.0f, 27.0f, 28.0f, 29.0f, 30.0f
 };
 
-// Array dei Ki calcolati da MATLAB (Gain Scheduling Analitico)
+// Ki array calculated by MATLAB (analytic gain scheduling)
 static const float Ki_LUT[LUT_SIZE] = {
     779061.4f, 388307.3f, 257523.4f, 191744.0f, 151979.2f, 
     125234.3f, 105941.2f, 91316.7f,  79814.6f,  70507.4f,
@@ -133,69 +133,72 @@ float reference_generator(float Vx, float steering_wheel_angle){
     }
 }
 
-Wheel_Torques ASC(Wheel_Torques torques_in, float omega_left, float omega_right, float u){
-
-
-    Wheel_Torques torques_out = torques_in; // Initialize output torques with input values
-    float target_slip_abs = 0.11f; // Target slip ratio for maximum traction
-    float Kp = 500.0f; // Proportional gain for slip control
-
-    float slip_RL = 0.0f;
-    float slip_RR = 0.0f;
-    float target_slip = 0.0f;
-
-    float V_wheel_RL = omega_left * WHEEL_RADIUS;
-
-    if (fabsf(V_wheel_RL) < 0.1f){
-        slip_RL = 0.0f; // Prevent division by zero at very low speeds
+Wheel_Targets get_wheel_targets(float u, float yaw_rate_actual) {
+    Wheel_Targets targets;
+    if (fabsf(u) < 1.0f) {
+        targets.v_target_L = u;
+        targets.v_target_R = u;
+        return targets;
     }
-    else {
-        slip_RL = (u - V_wheel_RL) / V_wheel_RL; // Slip ratio for rear left wheel
+    float delta_v = yaw_rate_actual * (TRACK_WIDTH / 2.0f);
+    targets.v_target_L = u - delta_v;
+    targets.v_target_R = u + delta_v;
+    return targets;
+}
+
+float calculate_slip_factor(float v_wheel, float v_target, float slip_threshold_abs) {
+    
+    // Protection against division by zero at very low wheel speeds
+    if (fabsf(v_wheel) < 0.1f) {
+        return 0.0f;
     }
 
+    // Negative slip -> acceleration
+    float slip = (v_target - v_wheel) / v_wheel;
 
-    if (fabsf(slip_RL) > target_slip_abs) {
-
-        if (slip_RL < 0.0f){
-            target_slip = -target_slip_abs;
+    // We control wheel spin (the wheel spins faster than the vehicle -> slip is negative)
+    if (slip < -slip_threshold_abs) {
+        
+        // Compute the excess (e.g. threshold 0.11, current slip -0.20 -> excess = 0.09)
+        float excess_slip = fabsf(slip) - slip_threshold_abs;
+        
+        // Safety saturation to never reverse the torque
+        if (excess_slip > 1.0f) {
+            excess_slip = 1.0f;
         }
-        else{
-            target_slip = target_slip_abs;
-        }
-
-        float error_slip = target_slip - slip_RL; // Slip error
-        float T_cut = Kp * error_slip; // Torque reduction based on slip error
-        torques_out.T_left -= T_cut; // Reduce torque on rear left wheel
-
+        
+        return excess_slip; // Percentage torque cut factor
     }
 
-    if (torques_out.T_left < -T_REGEN_MAX) { torques_out.T_left = -T_REGEN_MAX; } // Limit regenerative braking torque
+    return 0.0f; // No cut if there is no wheel spin
+}
 
-    float V_wheel_RR = omega_right * WHEEL_RADIUS;
+Wheel_Torques ASC_Advanced(Wheel_Torques torques_in, float omega_left, float omega_right, float u, float yaw_rate_actual){
 
-    if (fabsf(V_wheel_RR) < 0.1f){
-        slip_RR = 0.0f; // Prevent division by zero at very low speeds
-    }
-    else {
-        slip_RR = (u - V_wheel_RR) / V_wheel_RR; // Slip ratio for rear right wheel
-    }
 
-    if (fabsf(slip_RR) > target_slip_abs) {
+    Wheel_Torques torques_out = torques_in;
+    
+    if (u < 1.0f) return torques_out; // No ASC if the vehicle is almost stopped
 
-        if (slip_RR < 0.0f){
-            target_slip = -target_slip_abs;
-        }
-        else{
-            target_slip = target_slip_abs;
-        }
+    float slip_threshold = 0.11f; 
 
-        float error_slip = target_slip - slip_RR; // Slip error
-        float T_cut = Kp * error_slip; // Torque reduction based on slip error
-        torques_out.T_right -= T_cut; // Reduce torque on rear right wheel
+    Wheel_Targets targets = get_wheel_targets(u, yaw_rate_actual);
 
+    // Left wheel (RL)
+    float v_wheel_L = omega_left * WHEEL_RADIUS;
+    float slip_factor_L = calculate_slip_factor(v_wheel_L, targets.v_target_L, slip_threshold);
+    
+    if (torques_out.T_left > 0.0f) {
+        torques_out.T_left *= (1.0f - slip_factor_L);
     }
 
-    if (torques_out.T_right < -T_REGEN_MAX) { torques_out.T_right = -T_REGEN_MAX; } // Limit regenerative braking torque
+    // Right wheel (RR)
+    float v_wheel_R = omega_right * WHEEL_RADIUS;
+    float slip_factor_R = calculate_slip_factor(v_wheel_R, targets.v_target_R, slip_threshold);
+    
+    if (torques_out.T_right > 0.0f) {
+        torques_out.T_right *= (1.0f - slip_factor_R);
+    }
 
     return torques_out;
 }
@@ -210,70 +213,70 @@ float get_max_regen_current(float SoC){
 
 }
 
-Brake_Blending_Output brake_blending(float brake_pedal_front, float bb_desired_pilot, float bb_actual, float SoC){
+// Brake_Blending_Output brake_blending(float brake_pedal_front, float bb_desired_pilot, float bb_actual, float SoC){
 
-    Brake_Blending_Output out = {0.0f, 0.0f, 0.0f, bb_desired_pilot};
+//     Brake_Blending_Output out = {0.0f, 0.0f, 0.0f, bb_desired_pilot};
 
-    if(brake_pedal_front <= BRAKE_DEADZONE){
-        return out;                                 // No braking if pedal is in the deadzone
-    }
+//     if(brake_pedal_front <= BRAKE_DEADZONE){
+//         return out;                                 // No braking if pedal is in the deadzone
+//     }
 
-    // Calculate mechanical actual braking torques
+//     // Calculate mechanical actual braking torques
 
-    float T_mech_front = - (brake_pedal_front * K_BRAKE); // Mechanical braking torque from front brake pedal input
+//     float T_mech_front = - (brake_pedal_front * K_BRAKE); // Mechanical braking torque from front brake pedal input
 
-    float T_mech_total = T_mech_front / bb_actual; // Total mechanical braking torque based on actual bias
-    float T_mech_rear_actual = T_mech_total - T_mech_front; // Mechanical braking torque needed at the rear to achieve the actual bias
+//     float T_mech_total = T_mech_front / bb_actual; // Total mechanical braking torque based on actual bias
+//     float T_mech_rear_actual = T_mech_total - T_mech_front; // Mechanical braking torque needed at the rear to achieve the actual bias
 
-    // Calculate desired braking torques based on the desired bias by the pilot
+//     // Calculate desired braking torques based on the desired bias by the pilot
 
-    float T_total_target = T_mech_total / bb_desired_pilot; // Total braking torque needed to achieve the desired bias
-    float T_rear_target = T_total_target - T_mech_front; // Desired rear braking torque to achieve the desired bias
+//     float T_total_target = T_mech_total / bb_desired_pilot; // Total braking torque needed to achieve the desired bias
+//     float T_rear_target = T_total_target - T_mech_front; // Desired rear braking torque to achieve the desired bias
 
-    // Maximum regenerative braking torque based on SoC
+//     // Maximum regenerative braking torque based on SoC
 
-    float I_q_max = get_max_regen_current(SoC);
-    float T_regen_max = I_q_max * MOTOR_KT * GEAR_RATIO * 2.0f; // Convert max regen current to max regen torque
+//     float I_q_max = get_max_regen_current(SoC);
+//     float T_regen_max = I_q_max * MOTOR_KT * GEAR_RATIO * 2.0f; // Convert max regen current to max regen torque
 
-    // Actual regenerative braking torque needed to achieve the desired bias
+//     // Actual regenerative braking torque needed to achieve the desired bias
 
-    float T_regen_needed = T_rear_target - T_mech_rear_actual; 
+//     float T_regen_needed = T_rear_target - T_mech_rear_actual; 
 
-    if (T_regen_needed > 0.0f) {
-        T_regen_needed = 0.0f;
-    }
+//     if (T_regen_needed > 0.0f) {
+//         T_regen_needed = 0.0f;
+//     }
 
-    // Calculate actual regenerative braking torque (limited by max regen torque)
+//     // Calculate actual regenerative braking torque (limited by max regen torque)
 
-    out.T_regen_TV = fmaxf(T_regen_max, T_regen_needed);
+//     out.T_regen_TV = fmaxf(T_regen_max, T_regen_needed);
 
-    // Calculate mechanical braking
+//     // Calculate mechanical braking
 
-    float T_mech_rear_target = T_rear_target - T_regen_max;
+//     float T_mech_rear_target = T_rear_target - T_regen_max;
     
-    if (T_mech_rear_target > 0.0f) { 
-        T_mech_rear_target = 0.0f; // I freni meccanici non possono spingere
-    }
+//     if (T_mech_rear_target > 0.0f) { 
+//         T_mech_rear_target = 0.0f; // I freni meccanici non possono spingere
+//     }
 
-    float total_mech_target = T_mech_front + T_mech_rear_target;
+//     float total_mech_target = T_mech_front + T_mech_rear_target;
 
-    if (total_mech_target < -1.0f) { // Protezione divisione per zero
-        out.mech_bias_requested = T_mech_front / total_mech_target;
-    } else {
-        out.mech_bias_requested = bb_desired_pilot;
-    }
+//     if (total_mech_target < -1.0f) { // Protezione divisione per zero
+//         out.mech_bias_requested = T_mech_front / total_mech_target;
+//     } else {
+//         out.mech_bias_requested = bb_desired_pilot;
+//     }
 
-    // Limiti fisici di sicurezza per la richiesta al motorino meccanico
-    if (out.mech_bias_requested > 0.80f) out.mech_bias_requested = 0.84f;
-    if (out.mech_bias_requested < 0.40f) out.mech_bias_requested = 0.60f;
+//     // Limiti fisici di sicurezza per la richiesta al motorino meccanico
+//     if (out.mech_bias_requested > 0.80f) out.mech_bias_requested = 0.84f;
+//     if (out.mech_bias_requested < 0.40f) out.mech_bias_requested = 0.60f;
 
-    // Output per logging o altri calcoli
-    out.T_brake_front = T_mech_front;
-    out.T_brake_rear = T_mech_rear_actual;
+//     // Output per logging o altri calcoli
+//     out.T_brake_front = T_mech_front;
+//     out.T_brake_rear = T_mech_rear_actual;
 
-    return out;
+//     return out;
 
-}
+// }
 
 TV_Output TVC_Main(float throttle, float brake_pedal, float Vx, float steering_wheel_angle, float raw_gyro_z, float omega_left,
                             float omega_right, float dt, PID_State *pid, float *prev_yaw_ref_filtered, float *prev_gyro_filtered){
@@ -285,15 +288,15 @@ TV_Output TVC_Main(float throttle, float brake_pedal, float Vx, float steering_w
 
                             if(brake_pedal > BRAKE_DEADZONE){
                                 //out.brake_cmds = brake_blending(brake_pedal, I_q_max);
-                                T_req_pilot = out.brake_cmds.T_regen_TV;
+                                // T_req_pilot = out.brake_cmds.T_regen_TV;
                             }
                             else{
 
                                 T_req_pilot = throttle * K_THROTTLE; // Convert throttle input to total torque request    
-                                out.brake_cmds.T_regen_TV = 0.0f;
-                                out.brake_cmds.T_brake_front = 0.0f;
-                                out.brake_cmds.T_brake_rear = 0.0f;
-                                out.brake_cmds.mech_bias_requested = IDEAL_FRONT_BIAS;
+                                // out.brake_cmds.T_regen_TV = 0.0f;
+                                // out.brake_cmds.T_brake_front = 0.0f;
+                                // out.brake_cmds.T_brake_rear = 0.0f;
+                                // out.brake_cmds.mech_bias_requested = IDEAL_FRONT_BIAS;
                             }
 
                             // 1. TODO: Manipulation yaw rate signal from IMU
@@ -336,7 +339,7 @@ TV_Output TVC_Main(float throttle, float brake_pedal, float Vx, float steering_w
 
                             // 8. Apply ASC for traction control
 
-                            Wheel_Torques torques_final = ASC(torques_allocated, omega_left, omega_right, Vx);
+                            Wheel_Torques torques_final = ASC_Advanced(torques_allocated, omega_left, omega_right, Vx, yaw_rate_actual);
 
                             // 9. TODO: Manage the regenerative braking
 
