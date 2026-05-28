@@ -21,6 +21,89 @@ static const float Ki_LUT[LUT_SIZE] = {
     15595.7f,  14208.8f,  12913.8f,  11701.9f,  10565.0f
 };
 
+void Kalman_Init(Kalman_State *kf, float radius) {
+    kf->u_est = 0.0f;
+    kf->bias = 0.0f;
+    
+    // Inizializzazione Matrice P (Identità)
+    kf->P00 = 1.0f; kf->P01 = 0.0f;
+    kf->P10 = 0.0f; kf->P11 = 1.0f;
+    
+    // Tuning del tuo script MATLAB corazzato
+    kf->Q_vel = 0.05f;      
+    kf->Q_bias = 0.0001f;   
+    kf->R = 50.0f;  // Alzato come da tua telemetria       
+    
+    kf->wheel_radius = radius;
+}
+
+float Kalman_Update(Kalman_State *kf, float w_fl, float w_fr, float imu_ax, float dt) {
+    if (dt <= 0.0f) return kf->u_est;
+
+    // ==========================================
+    // 1. PREDIZIONE (Modello Cinematico con Bias)
+    // ==========================================
+    // X_pred = A * X + B * u (Sottraiamo il bias dall'accelerazione)
+    kf->u_est += (imu_ax - kf->bias) * dt;
+    // kf->bias rimane invariato nella predizione (derivata nulla)
+
+    // Aggiornamento Matrice di Covarianza P_pred = A * P * A^T + Q
+    // (Srotolamento algebrico della moltiplicazione di matrici 2x2)
+    float P00_pred = kf->P00 - dt * (kf->P10 + kf->P01) + (dt * dt * kf->P11) + kf->Q_vel;
+    float P01_pred = kf->P01 - dt * kf->P11;
+    float P10_pred = kf->P10 - dt * kf->P11;
+    float P11_pred = kf->P11 + kf->Q_bias;
+
+    // ==========================================
+    // 2. ELABORAZIONE MISURA E SLIP REJECTION
+    // ==========================================
+    float v_fl = w_fl * kf->wheel_radius;
+    float v_fr = w_fr * kf->wheel_radius;
+    float v_meas;
+
+    // Logica Smart Average: scarta un sensore se sballa rispetto all'altro
+    if (fabsf(v_fl - v_fr) > 2.0f) {
+        if (fabsf(v_fl - kf->u_est) < fabsf(v_fr - kf->u_est)) {
+            v_meas = v_fl;
+        } else {
+            v_meas = v_fr;
+        }
+    } else {
+        v_meas = (v_fl + v_fr) / 2.0f;
+    }
+
+    // Slip Rejection (Se la ruota sana comunque slitta/blocca, ignorala)
+    float current_R = kf->R;
+    if (fabsf(v_meas - kf->u_est) > 2.0f) {
+        current_R *= 50.0f; 
+    }
+
+    // ==========================================
+    // 3. AGGIORNAMENTO (Kalman Gain)
+    // ==========================================
+    // Innovazione (Errore di misura)
+    float y = v_meas - kf->u_est;
+
+    // Fattore di scala (S = H * P_pred * H^T + R)
+    float S = P00_pred + current_R;
+
+    // Kalman Gain (K = P_pred * H^T * 1/S)
+    float K0 = P00_pred / S; // Gain per la velocità
+    float K1 = P10_pred / S; // Gain per il bias
+
+    // Correzione degli stati
+    kf->u_est += K0 * y;
+    kf->bias  += K1 * y;
+
+    // Aggiornamento Matrice P (P = (I - K*H) * P_pred)
+    kf->P00 = P00_pred - K0 * P00_pred;
+    kf->P01 = P01_pred - K0 * P01_pred;
+    kf->P10 = P10_pred - K1 * P00_pred;
+    kf->P11 = P11_pred - K1 * P01_pred;
+
+    return kf->u_est;
+}
+
 void  PID_Init(PID_State *pid, float Kp, float Ki, float Kd, float dt){
     pid->Kp = Kp;
     pid->Ki = Ki;

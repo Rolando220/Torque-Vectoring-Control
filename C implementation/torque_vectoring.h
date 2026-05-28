@@ -78,9 +78,28 @@ typedef struct {
 //     float mech_bias_requested;
 // } Brake_Blending_Output;
 
+// Struttura per lo stato del Filtro di Kalman (2D)
+typedef struct {
+    float u_est;        // Stato 1: Velocità stimata (m/s)
+    float bias;         // Stato 2: Bias stimato (m/s^2)
+    
+    // Matrice di covarianza dell'errore P (2x2)
+    float P00, P01, P10, P11; 
+    
+    // Parametri di tuning
+    float Q_vel;        // Rumore processo velocità
+    float Q_bias;       // Rumore processo bias
+    float R;            // Rumore misura ruote
+    
+    float wheel_radius;
+} Kalman_State;
+
 
 // Function prototypes
 
+
+void Kalman_Init(Kalman_State *kf, float radius);
+float Kalman_Update(Kalman_State *kf, float w_fl, float w_fr, float imu_ax, float dt);
 void  PID_Init(PID_State *pid, float Kp, float Ki, float Kd, float dt);
 float interpolate_KI(float Vx);
 float LPF(float input, float* prev_output, float tau, float dt);
