@@ -361,75 +361,90 @@ float get_max_regen_current(float SoC){
 
 // }
 
-TV_Output TVC_Main(float throttle, float brake_pedal, float Vx, float steering_wheel_angle, float raw_gyro_z, float omega_left,
-                            float omega_right, float dt, PID_State *pid, float *prev_yaw_ref_filtered, float *prev_gyro_filtered){
+TV_Output TVC_Main(float throttle, float brake_pedal, float steering_wheel_angle, 
+                   float raw_gyro_z, float imu_ax, float omega_left, float omega_right, 
+                   float SoC, float dt, 
+                   PID_State *pid, Kalman_State *kf, 
+                   float *prev_yaw_ref_filtered, float *prev_gyro_filtered) {
 
-                            TV_Output out;
-                            float T_req_pilot = 0.0f;
+    TV_Output out;
+    float T_req_pilot = 0.0f;
 
-                            // I_q_max = funzione();
+    // =========================================================
+    // 1. ELABORAZIONE SEGNALI E STIMA STATO
+    // =========================================================
+    
+    // Stima della Velocità Longitudinale (Vx) tramite Filtro di Kalman
+    float Vx = Kalman_Update(kf, omega_left, omega_right, imu_ax, dt);
 
-                            if(brake_pedal > BRAKE_DEADZONE){
-                                //out.brake_cmds = brake_blending(brake_pedal, I_q_max);
-                                // T_req_pilot = out.brake_cmds.T_regen_TV;
-                            }
-                            else{
+    // Filtraggio e correzione dello Yaw Rate dall'IMU
+    float tau_gyro = 0.01f; 
+    float gyro_z_corrected = raw_gyro_z - GYRO_Z_BIAS; 
+    float yaw_rate_actual = LPF(gyro_z_corrected, prev_gyro_filtered, tau_gyro, dt);
 
-                                T_req_pilot = throttle * K_THROTTLE; // Convert throttle input to total torque request    
-                                // out.brake_cmds.T_regen_TV = 0.0f;
-                                // out.brake_cmds.T_brake_front = 0.0f;
-                                // out.brake_cmds.T_brake_rear = 0.0f;
-                                // out.brake_cmds.mech_bias_requested = IDEAL_FRONT_BIAS;
-                            }
+    // =========================================================
+    // 2. DINAMICA LONGITUDINALE (Trazione & Lift-off Regen)
+    // =========================================================
+    
+    // Il Brake Blending è temporaneamente in pausa e permettiamo la 
+    // sovrapposizione dei pedali (nessun taglio di sicurezza sul freno).
+    
+    if (throttle > 0.01f) {
+        // Trazione normale: dipendente ESCLUSIVAMENTE dall'acceleratore
+        T_req_pilot = throttle * K_THROTTLE; 
+    } 
+    else {
+        // Lift-off Regen: L'acceleratore è completamente rilasciato. 
+        // 1. Leggiamo la corrente massima assorbibile dalla batteria in base al SoC
+        float I_q_max = get_max_regen_current(SoC);
+        
+        // 2. Convertiamo gli Ampere in Coppia totale massima rigenerabile (per 2 motori)
+        float T_regen_max = I_q_max * MOTOR_KT * GEAR_RATIO * 2.0f; 
+        
+        // 3. Applichiamo il 70% di questa coppia in frenata (segno negativo)
+        T_req_pilot = - (T_regen_max * 0.70f);
+    }
 
-                            // 1. TODO: Manipulation yaw rate signal from IMU
+    // =========================================================
+    // 3. DINAMICA LATERALE (Torque Vectoring)
+    // =========================================================
+    
+    // Generazione riferimento di imbardata e filtraggio
+    float raw_yaw_ref = reference_generator(Vx, steering_wheel_angle);
+    float tau_ref = 0.02f;
+    float yaw_rate_ref = LPF(raw_yaw_ref, prev_yaw_ref_filtered, tau_ref, dt);
 
-                            float tau_gyro = 0.01f; // Time constant for gyro low-pass filter
+    // Gain scheduling
+    pid->Ki = interpolate_KI(Vx);
 
-                            float gyro_z_corrected = raw_gyro_z - GYRO_Z_BIAS; // Correct for gyro bias
-                            float yaw_rate_actual = LPF(gyro_z_corrected, prev_gyro_filtered, tau_gyro, dt); // Filter the yaw rate signal to reduce noise
+    // Fade-out a basse velocità
+    float fade_multiplier = 1.0f;
+    if (Vx < 3.0f) {
+        fade_multiplier = 0.0f;
+    } else if (Vx < 5.0f) {
+        fade_multiplier = (Vx - 3.0f) / (5.0f - 3.0f);
+    }
 
-                            // 2. Generate yaw rate reference
+    // Calcolo momento di imbardata correttivo
+    float Mz_ctrl = TV_PID(yaw_rate_ref, yaw_rate_actual, pid);
+    Mz_ctrl *= fade_multiplier;
 
-                            float raw_yaw_ref = reference_generator(Vx, steering_wheel_angle);
+    // =========================================================
+    // 4. ALLOCAZIONE E CONTROLLO DI TRAZIONE (ASC)
+    // =========================================================
+    
+    // Suddivisione della coppia totale tra le due ruote
+    Wheel_Torques torques_allocated = torque_allocator(T_req_pilot, Mz_ctrl);
 
-                            // Filtering the reference yaw rate to avoid abrupt changes
+    // Taglio della coppia in caso di slittamento
+    Wheel_Torques torques_final = ASC_Advanced(torques_allocated, omega_left, omega_right, Vx, yaw_rate_actual);
 
-                            float tau_ref = 0.02f;
-                            float yaw_rate_ref = LPF(raw_yaw_ref, prev_yaw_ref_filtered, tau_ref, dt);
+    // =========================================================
+    // 5. ATTUAZIONE (Conversione in Correnti)
+    // =========================================================
+    
+    out.currents.current_left = torques_final.T_left / (MOTOR_KT * GEAR_RATIO);
+    out.currents.current_right = torques_final.T_right / (MOTOR_KT * GEAR_RATIO);
 
-                            // 4. Gain scheduling for Ki based on current speed
-
-                            pid->Ki = interpolate_KI(Vx);
-
-                            // 5. Fade-out of the control action at low speeds
-
-                            float fade_multiplier = 1.0f;
-                            if (Vx < 3.0f) {
-                                fade_multiplier = 0.0f; // Off below 3 m/s
-                            } else if (Vx < 5.0f) {
-                                fade_multiplier = (Vx - 3.0f) / (5.0f - 3.0f); // Linear ramp from 0 to 1 between 3 and 5 m/s
-                            }
-
-                            // 6. Compute Mz control action using PID controller
-
-                            float Mz_ctrl = TV_PID(yaw_rate_ref, yaw_rate_actual, pid);
-                            Mz_ctrl *= fade_multiplier; // Apply fade-out at low speeds
-
-                            // 7. Allocate torques to left and right wheels
-
-                            Wheel_Torques torques_allocated = torque_allocator(T_req_pilot, Mz_ctrl);
-
-                            // 8. Apply ASC for traction control
-
-                            Wheel_Torques torques_final = ASC_Advanced(torques_allocated, omega_left, omega_right, Vx, yaw_rate_actual);
-
-                            // 9. TODO: Manage the regenerative braking
-
-                            // 10. Torques to current for the VCU
-
-                            out.currents.current_left = torques_final.T_left / (MOTOR_KT * GEAR_RATIO);
-                            out.currents.current_right = torques_final.T_right / (MOTOR_KT * GEAR_RATIO);
-
-                            return out;
-                        }
+    return out;
+}

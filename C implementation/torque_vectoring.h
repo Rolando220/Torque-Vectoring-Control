@@ -111,7 +111,10 @@ float calculate_slip_factor(float v_wheel, float v_target, float slip_threshold_
 Wheel_Torques ASC_Advanced(Wheel_Torques torques_in, float omega_left, float omega_right, float u, float yaw_rate_actual);
 float get_max_regen_current(float SoC);
 // Brake_Blending_Output brake_blending(float brake_pedal_front, float bb_desired_pilot, float bb_actual, float SoC);
-TV_Output TVC_Main(float throttle, float brake_pedal, float Vx, float steering_wheel_angle, float raw_gyro_z, float omega_left,
-                        float omega_right, float dt, PID_State *pid, float *prev_yaw_ref_filtered, float *prev_gyro_filtered);
+TV_Output TVC_Main(float throttle, float brake_pedal, float steering_wheel_angle, 
+                   float raw_gyro_z, float imu_ax, float omega_left, float omega_right, 
+                   float SoC, float dt, 
+                   PID_State *pid, Kalman_State *kf, 
+                   float *prev_yaw_ref_filtered, float *prev_gyro_filtered);
 
 #endif
