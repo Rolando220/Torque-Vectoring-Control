@@ -24,8 +24,24 @@
 
 // Powertrain costants
 
-#define GEAR_RATIO       5.0f    // Gear ratio
-#define MOTOR_KT         0.54f   // Motor torque constant (Nm/A)
+#define GEAR_RATIO          5.0f    // Gear ratio
+#define MOTOR_KT            0.54f   // Motor torque constant (Nm/A)
+#define NUM_MOTORS          2
+#define CELLS_IN_SERIES     144
+#define CELLS_IN_PARALLEL   3
+#define R_PACK_WELDS        0.005f  // Estimated total welding resistance [Ohms]
+#define V_BATT_MAX          600.0f  // Maximum battery voltage [V]
+#define TEMP_MAX_INVERTER   85.0f   // Maximum inverter temperature [C]
+#define IQ_MAX_INVERTER     150.0f  // Hardware maximum quadrature current [A]
+#define IQ_MAX_PILOT        25.0f   // Maximum regen current allowed by pilot [A]
+#define GAIN_REGEN          0.70f   // Regen multiplier (70% of max capability)
+#define LOW_SPEED_THRS      15.0f   // Low speed threshold [rad/s] (approx 140 rpm)
+
+// Powertrain Efficiencies
+#define ETA_INVERTER        0.95f
+#define ETA_MOTOR           0.92f
+#define ETA_TRANSMISSION    0.98f
+#define ETA_TOTAL           (ETA_INVERTER * ETA_MOTOR * ETA_TRANSMISSION)
 
 // Braking costants
 
@@ -100,6 +116,7 @@ typedef struct {
 
 void Kalman_Init(Kalman_State *kf, float radius);
 float Kalman_Update(Kalman_State *kf, float w_fl, float w_fr, float imu_ax, float dt);
+
 void  PID_Init(PID_State *pid, float Kp, float Ki, float Kd, float dt);
 float interpolate_KI(float Vx);
 float LPF(float input, float* prev_output, float tau, float dt);
@@ -109,11 +126,20 @@ float reference_generator(float Vx, float steering_wheel_angle);
 Wheel_Targets get_wheel_targets(float u, float yaw_rate_actual);
 float calculate_slip_factor(float v_wheel, float v_target, float slip_threshold_abs);
 Wheel_Torques ASC_Advanced(Wheel_Torques torques_in, float omega_left, float omega_right, float u, float yaw_rate_actual);
-float get_max_regen_current(float SoC);
 // Brake_Blending_Output brake_blending(float brake_pedal_front, float bb_desired_pilot, float bb_actual, float SoC);
+
+// Iq_max functions for regen
+
+float clamp(float value, float min, float max);
+float interpolate_cells_power(float current_SoC, float current_temp);
+float get_max_regen_current(float SoC, float Temp_battery, float Temp_inverter, float omega_motor_rads, float V_batt, float Kt);
+
+
+// TVC Main function
+
 TV_Output TVC_Main(float throttle, float brake_pedal, float steering_wheel_angle, 
                    float raw_gyro_z, float imu_ax, float omega_left, float omega_right, 
-                   float SoC, float dt, 
+                   float SoC, float Temp_battery, float Temp_inverter, float V_batt, float dt, 
                    PID_State *pid, Kalman_State *kf, 
                    float *prev_yaw_ref_filtered, float *prev_gyro_filtered);
 
