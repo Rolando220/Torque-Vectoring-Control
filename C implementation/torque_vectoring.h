@@ -9,10 +9,10 @@
 #define WHEEL_RADIUS    0.2395f // Wheel radius vp.Rr (m)
 #define WHEELBASE       1.527f  // Wheelbase (m)
 #define STEER_RATIO     0.4273f // Steering ratio
-#define MU              1.0f    // Coefficient of friction
+#define MU              1.6f    // Coefficient of friction
 #define G_GRAVITY       9.81f   // Gravitational acceleration (m/s^2)
 #define VEHICLE_MASS    300.0f  // Vehicle mass (kg)
-#define K_US            0.0008f // Understeering coefficient
+#define K_US            -0.0008f // Understeering coefficient
 
 // Control limits
 
@@ -80,8 +80,21 @@ typedef struct {
     float current_right;  // Current command for right wheel (A)
 } Inverter_Currents;
 
+// Struttura di telemetria per il debugging in Simulink
+typedef struct {
+    float Vx_kf;              // Velocità longitudinale stimata dal Kalman
+    float yaw_rate_ref;       // Riferimento desiderato (post-filtro)
+    float yaw_rate_actual;    // Imbardata reale letta e filtrata dal giroscopio
+    float yaw_rate_error;     // L'errore in pasto al PID
+    float Mz_ctrl_pid;        // L'uscita del PID
+    float fade_multiplier;    // Lo stato di accensione del TVC (0.0 a 1.0)
+    float Ki_current;         // Il guadagno integrale che sta usando in quell'istante
+    float T_req_pilot;        // La richiesta di coppia (per capire se entra in regen)
+} TV_Debug_Telemetry;
+
 typedef struct {
     Inverter_Currents currents;
+    TV_Debug_Telemetry debug;
     // Brake_Blending_Output brake_cmds;
 } TV_Output;
 
@@ -138,9 +151,15 @@ float get_max_regen_current(float SoC, float Temp_battery, float Temp_inverter, 
 // TVC Main function
 
 TV_Output TVC_Main(float throttle, float brake_pedal, float steering_wheel_angle, 
-                   float raw_gyro_z, float imu_ax, float omega_left, float omega_right, 
-                   float SoC, float Temp_battery, float Temp_inverter, float V_batt, float dt, 
-                   PID_State *pid, Kalman_State *kf, 
-                   float *prev_yaw_ref_filtered, float *prev_gyro_filtered);
+                   float raw_gyro_z, float imu_ax, float omega_FL, float omega_FR, float omega_RL,
+                   float omega_RR, float SoC, float Temp_battery, float Temp_inverter, float V_batt, 
+                   float dt, PID_State *pid, Kalman_State *kf, float *prev_yaw_ref_filtered, 
+                   float *prev_gyro_filtered);
+                   
+
+// Simulink Wrapper Prototype
+TV_Output TVC_Simulink_Wrapper(float throttle, float brake_pedal, float steering_wheel_angle, 
+                               float raw_gyro_z, float imu_ax, float omega_FL, float omega_FR, float omega_RL, float omega_RR,
+                               float SoC, float Temp_battery, float Temp_inverter, float V_batt, float dt);
 
 #endif

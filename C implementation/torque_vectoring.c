@@ -63,15 +63,20 @@ void Kalman_Init(Kalman_State *kf, float radius) {
     kf->P10 = 0.0f; kf->P11 = 1.0f;
     
     // Tuning del tuo script MATLAB corazzato
-    kf->Q_vel = 0.05f;      
+    kf->Q_vel = 0.01f;      
     kf->Q_bias = 0.0001f;   
-    kf->R = 50.0f;  // Alzato come da tua telemetria       
+    kf->R = 0.1f;  // Alzato come da tua telemetria   
     
     kf->wheel_radius = radius;
 }
 
 float Kalman_Update(Kalman_State *kf, float w_fl, float w_fr, float imu_ax, float dt) {
     if (dt <= 0.0f) return kf->u_est;
+
+    // INIZIALIZZAZIONE SMART: Se il filtro è a zero ma le ruote girano forte, allinea la stima
+    // if (kf->u_est == 0.0f && (fabsf(w_fl) > 1.0f || fabsf(w_fr) > 1.0f)) {
+    //     kf->u_est = ((w_fl + w_fr) / 2.0f) * kf->wheel_radius;
+    // }
 
     // ==========================================
     // 1. PREDIZIONE (Modello Cinematico con Bias)
@@ -469,10 +474,10 @@ float get_max_regen_current(float SoC, float Temp_battery, float Temp_inverter, 
 }
 
 TV_Output TVC_Main(float throttle, float brake_pedal, float steering_wheel_angle, 
-                   float raw_gyro_z, float imu_ax, float omega_left, float omega_right, 
-                   float SoC, float Temp_battery, float Temp_inverter, float V_batt, float dt, 
-                   PID_State *pid, Kalman_State *kf, 
-                   float *prev_yaw_ref_filtered, float *prev_gyro_filtered) {
+                   float raw_gyro_z, float imu_ax, float omega_FL, float omega_FR, float omega_RL,
+                   float omega_RR, float SoC, float Temp_battery, float Temp_inverter, float V_batt, 
+                   float dt, PID_State *pid, Kalman_State *kf, float *prev_yaw_ref_filtered, 
+                   float *prev_gyro_filtered) {
 
     TV_Output out;
     float T_req_pilot = 0.0f;
@@ -482,7 +487,7 @@ TV_Output TVC_Main(float throttle, float brake_pedal, float steering_wheel_angle
     // =========================================================
     
     // Stima della Velocità Longitudinale (Vx) tramite Filtro di Kalman
-    float Vx = Kalman_Update(kf, omega_left, omega_right, imu_ax, dt);
+    float Vx = Kalman_Update(kf, omega_FL, omega_FR, imu_ax, dt);
 
     // Filtraggio e correzione dello Yaw Rate dall'IMU
     float tau_gyro = 0.01f; 
@@ -501,7 +506,7 @@ TV_Output TVC_Main(float throttle, float brake_pedal, float steering_wheel_angle
         T_req_pilot = throttle * K_THROTTLE; 
     } 
     else {
-        float omega_wheels_avg = (omega_left + omega_right) / 2.0f;
+        float omega_wheels_avg = (omega_RL + omega_RR) / 2.0f;
         float omega_motor_rads = omega_wheels_avg * GEAR_RATIO;
 
         float I_q_max = get_max_regen_current(SoC, Temp_battery, Temp_inverter, omega_motor_rads, V_batt, MOTOR_KT);
@@ -527,6 +532,7 @@ TV_Output TVC_Main(float throttle, float brake_pedal, float steering_wheel_angle
     float fade_multiplier = 1.0f;
     if (Vx < 3.0f) {
         fade_multiplier = 0.0f;
+        pid->integral_acc = 0.0f;
     } else if (Vx < 5.0f) {
         fade_multiplier = (Vx - 3.0f) / (5.0f - 3.0f);
     }
@@ -543,7 +549,9 @@ TV_Output TVC_Main(float throttle, float brake_pedal, float steering_wheel_angle
     Wheel_Torques torques_allocated = torque_allocator(T_req_pilot, Mz_ctrl);
 
     // Taglio della coppia in caso di slittamento
-    Wheel_Torques torques_final = ASC_Advanced(torques_allocated, omega_left, omega_right, Vx, yaw_rate_actual);
+    Wheel_Torques torques_final = ASC_Advanced(torques_allocated, omega_RL, omega_RR, Vx, yaw_rate_actual);
+
+    // Wheel_Torques torques_final = torques_allocated;
 
     // =========================================================
     // 5. ATTUAZIONE (Conversione in Correnti)
@@ -551,6 +559,18 @@ TV_Output TVC_Main(float throttle, float brake_pedal, float steering_wheel_angle
     
     out.currents.current_left = torques_final.T_left / (MOTOR_KT * GEAR_RATIO);
     out.currents.current_right = torques_final.T_right / (MOTOR_KT * GEAR_RATIO);
+
+    // =========================================================
+    // 6. TELEMETRIA DI DEBUG
+    // =========================================================
+    out.debug.Vx_kf = Vx;
+    out.debug.yaw_rate_ref = yaw_rate_ref;
+    out.debug.yaw_rate_actual = yaw_rate_actual;
+    out.debug.yaw_rate_error = yaw_rate_ref - yaw_rate_actual;
+    out.debug.Mz_ctrl_pid = Mz_ctrl;
+    out.debug.fade_multiplier = fade_multiplier;
+    out.debug.Ki_current = pid->Ki;
+    out.debug.T_req_pilot = T_req_pilot;
 
     return out;
 }

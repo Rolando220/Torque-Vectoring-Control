@@ -105,6 +105,12 @@ for i = 1:length(Vx_array)
             Vx, polo_lento, Kp_array(i), Ki_array(i));
 end
 
+for i = 1:length(Vx_array)
+
+fprintf('%8.1ff, ', Ki_array(i));
+
+end
+
 %% Plot delle LUT
 % figure('Name', 'Look-Up Tables TVC');
 % plot(Vx_array, Ki_array, '-o', 'LineWidth', 2, 'Color', 'r');
